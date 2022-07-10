@@ -13,14 +13,10 @@ import (
 	"github.com/spf13/viper"
 )
 
-//go:embed USAGE.txt
-var usage string
-
 // MAIN represents the base command when called without any subcommands
 var MAIN = &cobra.Command{
 	Use:   "jerriedr",
 	Short: "A CLI for operations on jerrie services.",
-	Long:  usage,
 }
 
 func main() {
