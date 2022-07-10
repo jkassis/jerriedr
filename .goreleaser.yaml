@@ -16,7 +16,7 @@ brews:
   tap:
     owner: jkassis
     name: homebrew-keg
-    token: "{{ .Env.TAP_GITHUB_TOKEN }}"
+    token: "{{ .Env.KEG_GITHUB_TOKEN }}"
 # dockers:
 # - image_templates: ["ghcr.io/goreleaser/example:{{ .Version }}"]
 #   dockerfile: Dockerfile
