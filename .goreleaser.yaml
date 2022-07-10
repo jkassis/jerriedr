@@ -11,7 +11,7 @@ builds:
     dir: .
     main: cmd/main.go
 brews:
-- name: dbdr
+- name: jerriedr
   homepage: https://github.com/jkassis/homebrew-keg
   tap:
     owner: jkassis
