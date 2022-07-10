@@ -25,23 +25,19 @@ func init() {
 	}
 
 	CMDDBConfig(c, v)
-
 	MAIN.AddCommand(c)
 }
 
 func CMDRaftIndexGet(v *viper.Viper) {
 	dbBadger := CMDDBRun(v)
 
-	index := uint64(v.GetInt64(FLAG_INDEX))
-	writeErr := dbBadger.TxnR(func(dbTxn core.DBTxn) error {
-		proposalIdxK := kittie.DBRaftProposalIDXK
-		proposalIdxV := &core.DBInt64V{Value: index}
-		return dbTxn.ObjGet(proposalIdxK, proposalIdxV)
-	})
-
-	if writeErr != nil {
-		log.Fatalf("%v", writeErr)
+	c := core.DBInt64{
+		K: kittie.DBRaftProposalIDXK,
+		V: &core.DBInt64V{},
+	}
+	if err := dbBadger.TxnR(func(dbTxn core.DBTxn) error { return dbTxn.ObjGet(c.K, c.V) }); err != nil {
+		log.Fatalf("%v", err)
 	}
 
-	fmt.Printf("Raft proposal index in DB is %d", index)
+	fmt.Printf("Raft proposal index in DB is %d", c.V.Value)
 }
