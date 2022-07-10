@@ -1,4 +1,4 @@
-project_name: dbdr
+project_name: jerriedr
 builds:
   - env: [CGO_ENABLED=0]
     goos:
@@ -31,8 +31,8 @@ brews:
 #   - --label=org.opencontainers.image.licenses=MIT
 nfpms:
 - maintainer: Jeremy Kassis <jkassis@gmail.com>
-  description: Performs some git operations on multiple repos and outputs summaries.
-  homepage: https://github.com/jkassis/dbdr
+  description: A CLI to perform maintenance on jerrie services.
+  homepage: https://github.com/jkassis/jerriedr
   license: MIT
   formats:
   - deb
