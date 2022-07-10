@@ -3,12 +3,14 @@ package main
 import (
 	"log"
 
-	badger "github.com/dgraph-io/badger/v2"
-	"github.com/dgraph-io/badger/v2/options"
 	"github.com/jkassis/jerrie/core"
 	"github.com/jkassis/jerrie/core/kittie"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+)
+
+const (
+	FLAG_INDEX = "index"
 )
 
 func init() {
@@ -25,29 +27,19 @@ func init() {
 		},
 	}
 
-	c.PersistentFlags().StringP("dbDir", "d", "", "database dir")
-	v.BindPFlag("dbDir", c.PersistentFlags().Lookup("dbDir"))
+	CMDDBConfig(c, v)
 
-	c.PersistentFlags().IntP("index", "i", 0, "target index")
-	v.BindPFlag("index", c.PersistentFlags().Lookup("index"))
+	c.PersistentFlags().IntP(FLAG_INDEX, "i", 0, "target index")
+	c.MarkPersistentFlagRequired(FLAG_INDEX)
+	v.BindPFlag(FLAG_INDEX, c.PersistentFlags().Lookup(FLAG_INDEX))
 
 	MAIN.AddCommand(c)
 }
 
 func CMDRaftIndexSet(v *viper.Viper) {
-	dbDir := v.GetString("dbDir")
-	index := uint64(v.GetInt64("index"))
+	dbBadger := CMDDBRun(v)
 
-	core.Log.Warnf("opening database at %s/data", dbDir)
-	opts := badger.DefaultOptions(dbDir)
-	opts = opts.WithLogger(core.Log)
-	opts = opts.WithSyncWrites(false)
-	opts = opts.WithValueLogLoadingMode(options.FileIO)
-	opts = opts.WithTableLoadingMode(options.FileIO)
-	opts = opts.WithMaxCacheSize(1 << 27)
-	opts = opts.WithNumVersionsToKeep(0)
-	dbBadger := core.NewDBBadger(&opts, core.Log)
-
+	index := uint64(v.GetInt64(FLAG_INDEX))
 	writeErr := dbBadger.TxnW(func(dbTxn core.DBTxn) error {
 		proposalIdxK := kittie.DBRaftProposalIDXK
 		proposalIdxV := &core.DBInt64V{Value: index}
