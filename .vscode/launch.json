@@ -11,7 +11,9 @@
       "mode": "debug",
       "program": "${workspaceFolder}/cmd",
       "cwd": "${workspaceFolder}",
-      "args": ["raftIndexSet", "dbDir=asdf", "i=0"],
+      "args": ["raftIndexGet"],
+      // "args": ["raftIndexGet", "dbDir=/var/multi/single/local-server-0/data/"],
+      // "args": ["raftIndexSet", "dbDir=asdf", "i=0"],
       "env": {
         "LOG_LEVEL": "info"
       }
