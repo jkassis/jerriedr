@@ -2,13 +2,13 @@
 
 ## Description
 
-A CLI to perform maintenance on dragonboat services.
+A CLI to perform maintenance on jerrie services.
 
 ## Usage
 
 >
 ```
-> [I] jkassis@Jeremys-MacBook-Pro ~/code> dbdr [\<repo-dir\>]+
+> [I] jkassis@Jeremys-MacBook-Pro ~/code> jerriedr [\<repo-dir\>]+
 ```
 
 ## eg
