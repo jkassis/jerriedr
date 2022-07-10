@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/jkassis/jerrie/core"
@@ -39,14 +40,15 @@ func init() {
 func CMDRaftIndexSet(v *viper.Viper) {
 	dbBadger := CMDDBRun(v)
 
-	index := uint64(v.GetInt64(FLAG_INDEX))
-	writeErr := dbBadger.TxnW(func(dbTxn core.DBTxn) error {
-		proposalIdxK := kittie.DBRaftProposalIDXK
-		proposalIdxV := &core.DBInt64V{Value: index}
-		return dbTxn.ObjPut(proposalIdxK, proposalIdxV, 0)
-	})
-
-	if writeErr != nil {
-		log.Fatalf("%v", writeErr)
+	c := core.DBInt64{
+		K: kittie.DBRaftProposalIDXK,
+		V: &core.DBInt64V{Value: uint64(v.GetInt64(FLAG_INDEX))},
 	}
+	if err := dbBadger.TxnW(func(dbTxn core.DBTxn) error {
+		return dbTxn.ObjPut(c.K, c.V, 0)
+	}); err != nil {
+		log.Fatalf("%v", err)
+	}
+
+	fmt.Printf("Raft proposal index in DB set to %d", c.V.Value)
 }
