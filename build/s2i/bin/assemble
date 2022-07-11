@@ -1,0 +1,33 @@
+#!/bin/sh -e
+#
+# S2I assemble script for the 'jerriedr' image.
+# The 'assemble' script builds your application source so that it is ready to run.
+#
+# For more information refer to the documentation:
+#	https://github.com/openshift/source-to-image/blob/master/docs/builder_image.md
+#
+
+# If the 'jerriedr' assemble script is executed with the '-h' flag, print the usage.
+if [[ "$1" == "-h" ]]; then
+	exec /usr/libexec/s2i/usage
+fi
+
+# Restore artifacts from the previous build (if they exist).
+#
+if [ "$(ls /tmp/artifacts/ 2>/dev/null)" ]; then
+  echo "---> Restoring build artifacts..."
+  shopt -s dotglob
+  ls /tmp/artifacts
+  mv /tmp/artifacts/* /.cache
+  ls /.cache
+  shopt -u dotglob
+fi
+
+echo "---> Installing application source..."
+cd /tmp/src
+go mod download
+
+echo "---> Building application from source..."
+# go build -tags dragonboat_no_rocksdb -o /opt/app-root/server .
+go build -o /opt/app-root/server cmd/*
+ln -s /opt/app-root/server /usr/bin/jerriedr
