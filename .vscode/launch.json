@@ -11,10 +11,9 @@
       "mode": "debug",
       "program": "${workspaceFolder}/cmd",
       "cwd": "${workspaceFolder}",
-      // "args": ["raftIndexGet"],
       // "args": ["raftIndexGet", "--dbDir=/var/multi/single/local-server-0/data/"],
-      "args": ["raftIndexSet", "--dbDir=/var/multi/single/local-server-0/data/", "--index=62"],
-      // "args": ["raftIndexSet", "dbDir=asdf", "i=0"],
+      "args": ["serve"],
+      // "args": ["raftIndexSet", "--dbDir=/var/multi/single/local-server-0/data/", "--index=62"],
       "env": {
         "LOG_LEVEL": "info"
       }
