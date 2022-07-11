@@ -29,5 +29,6 @@ go mod download
 
 echo "---> Building application from source..."
 # go build -tags dragonboat_no_rocksdb -o /opt/app-root/server .
+git config credential.helper '!f() { sleep 1; echo "username=${GIT_USER}"; echo "password=${GIT_PASSWORD}"; }; f'
 go build -o /opt/app-root/server cmd/*
 ln -s /opt/app-root/server /usr/bin/jerriedr
