@@ -23,12 +23,12 @@ if [ "$(ls /tmp/artifacts/ 2>/dev/null)" ]; then
   shopt -u dotglob
 fi
 
+echo "---> Setting git credential.helper"
+git config --global credential.helper '!f() { sleep 1; echo "username=${GIT_USER}"; echo "password=${GIT_PASSWORD}"; }; f'
+
 echo "---> Installing application source..."
 cd /tmp/src
 go mod download
-
-echo "---> Setting git credential.helper"
-git config --global credential.helper '!f() { sleep 1; echo "username=${GIT_USER}"; echo "password=${GIT_PASSWORD}"; }; f'
 
 echo "---> Building application from source..."
 # go build -tags dragonboat_no_rocksdb -o /opt/app-root/server .
