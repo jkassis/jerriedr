@@ -12,7 +12,8 @@
       "program": "${workspaceFolder}/cmd",
       "cwd": "${workspaceFolder}",
       // "args": ["raftIndexGet", "--dbDir=/var/multi/single/local-server-0/data/"],
-      "args": ["serve"],
+      // "args": ["serve"],
+      "args": ["backup", "-d", "/var/multi/single/local-server-0/data"],
       // "args": ["raftIndexSet", "--dbDir=/var/multi/single/local-server-0/data/", "--index=62"],
       "env": {
         "LOG_LEVEL": "info"
