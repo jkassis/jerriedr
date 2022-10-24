@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Configure Git Credentials
-      - uses: oleksiyrudenko/gha-git-credentials@v2-latest
+        uses: oleksiyrudenko/gha-git-credentials@v2-latest
         with:
           token: '${{ secrets.PRIVATE_REPO_ACCESS_TOKEN }}'
       - name: Checkout
