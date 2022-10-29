@@ -23,8 +23,14 @@ Flags:
 
 ## Installation
 
->
+> MacOS
 ```
 > [I] jkassis@Jeremys-MacBook-Pro ~/code>  tap jkassis/keg
 > [I] jkassis@Jeremys-MacBook-Pro ~/code>  brew install jerriedr
+```
+
+> AMD Linux
+```
+> wget https://github.com/jkassis/jerriedr/releases/download/v<version>/jerriedr_<version>_linux_amd64.tar.gz
+> tar xfz jerriedr_<version>_linux_amd64.tar.gz
 ```
