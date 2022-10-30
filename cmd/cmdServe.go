@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/jkassis/jerrie/core"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 func init() {
+	core.Log.Warnf("defining CMDServe")
 	// A general configuration object (feed with flags, conf files, etc.)
 	v := viper.New()
 
