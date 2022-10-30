@@ -8,6 +8,7 @@ import (
 
 	"net/http"
 
+	"github.com/google/uuid"
 	"github.com/jkassis/jerrie/core"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -44,14 +45,14 @@ func CMDBackupOnline(v *viper.Viper) {
 	//   Fn: string
 	//   Body: object
 	// }
-	reqBody := strings.NewReader(`
+	reqBody := strings.NewReader(fmt.Sprintf(`
 	{
-		UUID: '',
-	  Fn: 'v1/Backup',
-	  Body: { },
-	}`)
+	  "UUID": "%s",
+	  "Fn": "v1/Backup",
+	  "Body": {}
+	}`, uuid.NewString()))
 
-	req, err := http.NewRequest("PUT", fmt.Sprintf("%s://%s/raft/leader/read", scheme, hostport), reqBody)
+	req, err := http.NewRequest("POST", fmt.Sprintf("%s://%s/raft/leader/read", scheme, hostport), reqBody)
 	if err != nil {
 		core.Log.Fatalln(err)
 	}
@@ -67,7 +68,7 @@ func CMDBackupOnline(v *viper.Viper) {
 		core.Log.Fatalln(err)
 	}
 
-	core.Log.Warnf("BackupOnline: %s", body)
+	core.Log.Warnf("BackupOnline: %d %s", resp.StatusCode, body)
 	if err != nil {
 		core.Log.Fatalln(err)
 	}

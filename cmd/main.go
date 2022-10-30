@@ -42,7 +42,7 @@ func CMDDBConfig(c *cobra.Command, v *viper.Viper) {
 
 func CMDServerConfig(c *cobra.Command, v *viper.Viper) {
 	core.Log.Warnf("CMDServerConfig")
-	c.PersistentFlags().StringP(FLAG_SERVER_HOSTPORT, "u", "localhost:10100", "server hostport")
+	c.PersistentFlags().StringP(FLAG_SERVER_HOSTPORT, "u", "localhost:10000", "server hostport")
 	// c.MarkPersistentFlagRequired(FLAG_SERVER_HOSTPORT)
 	v.BindPFlag(FLAG_SERVER_HOSTPORT, c.PersistentFlags().Lookup(FLAG_SERVER_HOSTPORT))
 
