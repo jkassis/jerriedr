@@ -10,7 +10,6 @@ import (
 )
 
 func init() {
-	core.Log.Warnf("defining CMDBackup")
 	// A general configuration object (feed with flags, conf files, etc.)
 	v := viper.New()
 

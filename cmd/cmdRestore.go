@@ -10,7 +10,6 @@ import (
 )
 
 func init() {
-	core.Log.Warnf("defining CMDRestore")
 	// A general configuration object (feed with flags, conf files, etc.)
 	v := viper.New()
 

@@ -3,17 +3,18 @@ package main
 import (
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"net/http"
 
+	"github.com/google/uuid"
 	"github.com/jkassis/jerrie/core"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 func init() {
-	core.Log.Warnf("defining CMDRestoreOnline")
 	// A general configuration object (feed with flags, conf files, etc.)
 	v := viper.New()
 
@@ -33,11 +34,18 @@ func init() {
 
 func CMDRestoreOnline(v *viper.Viper) {
 	start := time.Now()
-	core.Log.Warn("Restore: starting")
+	core.Log.Warn("RestoreOnline: starting")
 
 	hostport := v.GetString(FLAG_SERVER_HOSTPORT)
 	scheme := v.GetString(FLAG_SERVER_SCHEME)
-	req, err := http.NewRequest("PUT", fmt.Sprintf("%s://%s/v1/Restore", scheme, hostport), nil)
+	reqBody := strings.NewReader(fmt.Sprintf(`
+	{
+	  "UUID": "%s",
+	  "Fn": "v1/Restore",
+	  "Body": {}
+	}`, uuid.NewString()))
+
+	req, err := http.NewRequest("POST", fmt.Sprintf("%s://%s/raft/leader/write", scheme, hostport), reqBody)
 	if err != nil {
 		core.Log.Fatalln(err)
 	}
@@ -47,17 +55,17 @@ func CMDRestoreOnline(v *viper.Viper) {
 		core.Log.Fatalln(err)
 	}
 
-	core.Log.Warnf("Restore: got response")
+	core.Log.Warnf("RestoreOnline: got response")
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		core.Log.Fatalln(err)
 	}
 
-	core.Log.Warnf("Restore: %s", body)
+	core.Log.Warnf("RestoreOnline: %s", body)
 	if err != nil {
 		core.Log.Fatalln(err)
 	}
 
 	duration := time.Since(start)
-	core.Log.Warnf("Restore: took %s", duration.String())
+	core.Log.Warnf("RestoreOnline: took %s", duration.String())
 }

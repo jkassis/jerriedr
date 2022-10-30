@@ -15,7 +15,6 @@ import (
 )
 
 func init() {
-	core.Log.Warnf("defining CMDBackupOnline")
 	// A general configuration object (feed with flags, conf files, etc.)
 	v := viper.New()
 
@@ -35,16 +34,10 @@ func init() {
 
 func CMDBackupOnline(v *viper.Viper) {
 	start := time.Now()
-	core.Log.Warnf("Backup: starting")
+	core.Log.Warnf("BackupOnline: starting")
 
 	hostport := v.GetString(FLAG_SERVER_HOSTPORT)
 	scheme := v.GetString(FLAG_SERVER_SCHEME)
-
-	// export interface RPCReq {
-	//   UUID: UUID
-	//   Fn: string
-	//   Body: object
-	// }
 	reqBody := strings.NewReader(fmt.Sprintf(`
 	{
 	  "UUID": "%s",

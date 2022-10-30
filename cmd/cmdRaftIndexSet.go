@@ -15,7 +15,6 @@ const (
 )
 
 func init() {
-	core.Log.Warnf("defining CMDRaftIndexSet")
 	// A general configuration object (feed with flags, conf files, etc.)
 	v := viper.New()
 

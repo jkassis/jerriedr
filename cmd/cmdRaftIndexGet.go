@@ -11,7 +11,6 @@ import (
 )
 
 func init() {
-	core.Log.Warnf("defining CMDRaftIndexGet")
 	// A general configuration object (feed with flags, conf files, etc.)
 	v := viper.New()
 
