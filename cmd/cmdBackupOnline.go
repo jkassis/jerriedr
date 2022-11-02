@@ -22,7 +22,13 @@ func init() {
 	c := &cobra.Command{
 		Use:   "backuponline",
 		Short: "Backup the DB to the permanent DB data backup directory",
-		// Long:  ``,
+		Long: `If you have trouble making this work, this command is equivalent to the following curl call...
+
+curl -d '{ "UUID": "<UUID>", "Fn": "/v1/Backup", "Body": {} }' -H 'Content-Type: application/json' http://<hostport>/raft/leader/read
+
+eg..
+curl -d '{ "UUID": "9db4caec-a449-4082-a1c3-ac82b4d25444", "Fn": "/v1/Backup", "Body": {} }' -H 'Content-Type: application/json' http://dockie-0.dockie-int.fg.svc.cluster.local:10000/raft/leader/read
+`,
 		Run: func(cmd *cobra.Command, args []string) {
 			CMDBackupOnline(v)
 		},
@@ -41,7 +47,7 @@ func CMDBackupOnline(v *viper.Viper) {
 	reqBody := strings.NewReader(fmt.Sprintf(`
 	{
 	  "UUID": "%s",
-	  "Fn": "v1/Backup",
+	  "Fn": "/v1/Backup",
 	  "Body": {}
 	}`, uuid.NewString()))
 

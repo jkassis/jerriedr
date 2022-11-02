@@ -17,7 +17,7 @@ LABEL io.k8s.description="Platform for building jerriedr" \
 # # ROCKSDB
 RUN echo "@testing http://nl.alpinelinux.org/alpine/edge/testing" >>/etc/apk/repositories
 RUN echo "@testing http://nl.alpinelinux.org/alpine/edge/main" >>/etc/apk/repositories
-RUN apk add --update --no-cache build-base linux-headers git cmake bash #wget mercurial g++ autoconf libgflags-dev cmake bash perl
+RUN apk add --update --no-cache build-base linux-headers git cmake bash rsync #wget mercurial g++ autoconf libgflags-dev cmake bash perl
 RUN apk add --update --no-cache zlib zlib-dev bzip2 bzip2-dev snappy snappy-dev lz4 lz4-dev zstd@testing zstd-dev@testing libtbb-dev@testing libtbb@testing
 
 

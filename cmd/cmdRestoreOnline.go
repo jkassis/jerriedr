@@ -41,7 +41,7 @@ func CMDRestoreOnline(v *viper.Viper) {
 	reqBody := strings.NewReader(fmt.Sprintf(`
 	{
 	  "UUID": "%s",
-	  "Fn": "v1/Restore",
+	  "Fn": "/v1/Restore",
 	  "Body": {}
 	}`, uuid.NewString()))
 
