@@ -33,3 +33,4 @@ go mod download
 echo "---> Building application from source..."
 # go build -tags dragonboat_no_rocksdb -o /opt/app-root/server .
 go build -o /opt/app-root/doctor cmd/*.go
+
