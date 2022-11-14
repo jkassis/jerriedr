@@ -1,16 +1,11 @@
 package main
 
 import (
-	"fmt"
-	"io"
-	"strconv"
+	"sort"
 	"strings"
 	"sync"
 	"time"
 
-	"net/http"
-
-	"github.com/google/uuid"
 	"github.com/jkassis/jerrie/core"
 	"github.com/jkassis/jerriedr/cmd/kube"
 	"github.com/spf13/cobra"
@@ -68,27 +63,6 @@ func ServiceSnapshotGet(v *viper.Viper, serviceSpecs []string) {
 		core.Log.Fatalf("ServiceSnapshotGet: %v", err)
 	}
 
-	// subroutine to do an http request
-	request := func(req *http.Request, serviceName string) {
-		// make the request
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			core.Log.Error(err)
-			return
-		}
-
-		// get response and report
-		defer resp.Body.Close()
-		resBody, err := io.ReadAll(resp.Body)
-		if err != nil {
-			core.Log.Error(err)
-		}
-		core.Log.Warnf("ServiceSnapshotGet: %s: %d %s", serviceName, resp.StatusCode, resBody)
-		if err != nil {
-			core.Log.Error(err)
-		}
-	}
-
 	// establish a WaitGroup
 	wg := sync.WaitGroup{}
 
@@ -106,27 +80,51 @@ func ServiceSnapshotGet(v *viper.Viper, serviceSpecs []string) {
 				core.Log.Fatalf("kube client initialization failed: %v", kubeErr)
 			}
 
-			// forward a local port
-			forwardedPort, err := kubeClient.PortForward(&kube.PortForwardRequest{
-				LocalPort:    0,
-				PodName:      service.PodName,
+			// get the pod
+			pod, err := kubeClient.GetPod(service.PodName, service.PodNamespace)
+			if err != nil {
+				core.Log.Fatalf("could not get pod: %v", err)
+			}
+
+			// run ls
+			output, err := kubeClient.ExecSync(pod, "", []string{"ls", service.Dir + "/backup"}, nil)
+			if err != nil {
+				core.Log.Errorf("could not execute ls on %s", service.Spec)
+				return
+			}
+
+			// check for files
+			files := strings.Split(output, "\n")
+			if len(files) == 0 {
+				core.Log.Errorf("no backups found in %s", service.Dir+"/backup")
+			}
+
+			// sort files
+			sort.Strings(files)
+			sort.Sort(sort.Reverse(sort.StringSlice(files)))
+
+			// the first one is the most recent!
+			latestBackup := files[0]
+
+			// copy it
+			fileFullPath := service.Dir + "/backup/" + latestBackup
+			err = kubeClient.CopyFromPod(&kube.FileSpec{
 				PodNamespace: service.PodNamespace,
-				PodPort:      service.PodPort,
-			})
+				PodName:      service.PodName,
+				File:         fileFullPath,
+			}, &kube.FileSpec{
+				PodNamespace: "",
+				PodName:      "",
+				File:         "/tmp/" + latestBackup,
+			}, pod, "")
+
 			if err != nil {
-				core.Log.Fatalf("could not port forward to kube service %s: %v", service.Spec, err)
+				core.Log.Errorf("error getting file %s: %v", fileFullPath, err)
+				return
 			}
 
-			localPort := forwardedPort.Local
-
-			serviceName := service.PodNamespace + "/" + service.PodName + ":" + strconv.Itoa(int(localPort))
-			core.Log.Warnf("Running remote backup for %s", serviceName)
-			reqBody := strings.NewReader(fmt.Sprintf(requestFormat, uuid.NewString(), version))
-			req, err := http.NewRequest("POST", fmt.Sprintf("%s://%s:%d/raft/leader/read", protocol, "localhost", localPort), reqBody)
-			if err != nil {
-				core.Log.Fatalln(err)
-			}
-			request(req, serviceName)
+			// warn
+			core.Log.Warnf("files: %v", files)
 		}(service)
 	}
 
@@ -135,14 +133,7 @@ func ServiceSnapshotGet(v *viper.Viper, serviceSpecs []string) {
 		wg.Add(1)
 		go func(service *HostService) {
 			defer wg.Done()
-			serviceName := service.Host + ":" + strconv.Itoa(service.Port)
-			core.Log.Warnf("Running remote backup for %s", serviceName)
-			reqBody := strings.NewReader(fmt.Sprintf(requestFormat, uuid.NewString(), version))
-			req, err := http.NewRequest("POST", fmt.Sprintf("%s://%s:%d/raft/leader/read", protocol, service.Host, service.Port), reqBody)
-			if err != nil {
-				core.Log.Fatalln(err)
-			}
-			request(req, serviceName)
+
 		}(service)
 	}
 

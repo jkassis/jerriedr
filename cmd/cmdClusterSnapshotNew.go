@@ -38,7 +38,7 @@ func CMDClusterSnapshotNew(v *viper.Viper) {
 	serviceSpecs := []string{
 		"kube|fg/dockie-0:10000",
 	}
-	ServiceBackupNew(v, serviceSpecs)
+	ServiceSnapshotNew(v, serviceSpecs)
 
 	duration := time.Since(start)
 	core.Log.Warnf("ClusterBackup: took %s", duration.String())

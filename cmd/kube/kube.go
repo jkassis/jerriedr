@@ -308,12 +308,13 @@ func (c *KubeClient) CopyFromPod(src, dst *FileSpec, pod *corev1.Pod, containerN
 	var stdout string
 	var err error
 
-	cmdArr = []string{"/usr/bin/cat", srcFile}
+	cmdArr = []string{"env", "cat", srcFile}
 	logrus.Infof("copying from pod : %s %s", pod.Name, src.String())
 	stdout, err = c.ExecSync(pod, containerName, cmdArr, nil)
 	if err != nil {
 		return err
 	}
+	logrus.Infof("copy complete: %s %s", pod.Name, srcFile)
 	return ioutil.WriteFile(dst.File, []byte(stdout), 0644)
 }
 

@@ -9,12 +9,14 @@ import (
 const FLAG_SERVICE = "service"
 
 type HostService struct {
+	Dir  string
 	Host string
 	Port int
 	Spec string
 }
 
 type PodService struct {
+	Dir          string
 	PodName      string
 	PodNamespace string
 	PodPort      int
@@ -25,38 +27,57 @@ type PodService struct {
 type ServiceSpec string
 
 func (s ServiceSpec) IsKube() bool {
-	return strings.HasPrefix(string(s), "kube|")
+	return strings.HasPrefix(string(s), "pod|")
+}
+
+func (s ServiceSpec) IsHost() bool {
+	return strings.HasPrefix(string(s), "host|")
 }
 
 func (s ServiceSpec) IsValid() bool {
 	// TODO could get more complex with the validation
+	parts := strings.Split(string(s), "|")
+	if len(parts) < 3 {
+		return false
+	}
+
+	host := parts[1]
+
 	if s.IsKube() {
-		return strings.Contains(string(s), "/") && strings.Contains(string(s), ":")
+		return strings.Contains(host, "/") && strings.Contains(host, ":")
 	} else {
-		return strings.Contains(string(s), ":")
+		return strings.Contains(host, ":")
 	}
 }
 
 func (s ServiceSpec) HostGet() string {
-	parts := strings.Split(string(s), ":")
+	parts := strings.Split(string(s), "|")
+	parts = strings.Split(parts[1], ":")
 	return parts[0]
 }
 
 func (s ServiceSpec) PodGet() string {
-	tail := string(s)[5:]
-	parts := strings.Split(tail, "/")
+	parts := strings.Split(string(s), "|")
+	parts = strings.Split(parts[1], "/")
 	parts = strings.Split(parts[1], ":")
 	return parts[0]
 }
 
 func (s ServiceSpec) NamespaceGet() string {
-	tail := string(s)[5:]
-	parts := strings.Split(tail, "/")
+	parts := strings.Split(string(s), "|")
+	parts = strings.Split(parts[1], "/")
 	return parts[0]
 }
 
+func (s ServiceSpec) DirGet() string {
+	parts := strings.Split(string(s), "|")
+	return parts[2]
+}
+
 func (s ServiceSpec) PortGet() (int, error) {
-	parts := strings.Split(string(s), ":")
+	parts := strings.Split(string(s), "|")
+	parts = strings.Split(parts[1], "/")
+	parts = strings.Split(parts[1], ":")
 	port, err := strconv.Atoi(parts[1])
 	if err != nil {
 		return 0, fmt.Errorf("bad port in %s: %v", string(s), err)
@@ -87,15 +108,23 @@ func parseServiceSpecs(serviceSpecs []string) ([]*HostService, []*PodService, er
 					PodNamespace: serviceSpec.NamespaceGet(),
 					PodPort:      podPort,
 					Spec:         serviceSpecString,
+					Dir:          serviceSpec.DirGet(),
 				})
-		} else {
+		} else if serviceSpec.IsHost() {
 			// no.
-			host := serviceSpec.HostGet()
 			port, err := serviceSpec.PortGet()
 			if err != nil {
 				return nil, nil, fmt.Errorf("could not parse service hostport: %v", serviceSpec)
 			}
-			hostServices = append(hostServices, &HostService{Host: host, Port: port, Spec: serviceSpecString})
+			hostServices = append(hostServices,
+				&HostService{
+					Host: serviceSpec.HostGet(),
+					Port: port,
+					Spec: serviceSpecString,
+					Dir:  serviceSpec.DirGet(),
+				})
+		} else {
+			return nil, nil, fmt.Errorf("serviceSpec type must be pod|host: %v", serviceSpec)
 		}
 	}
 

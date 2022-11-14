@@ -25,7 +25,7 @@ func init() {
 		Short: "Retrieve snapshots from services and store in a local folder.",
 		Long:  ``,
 		Run: func(cmd *cobra.Command, args []string) {
-			CMDServiceServiceSnapshotNew(v)
+			CMDServiceSnapshotNew(v)
 		},
 	}
 
@@ -41,19 +41,19 @@ func init() {
 
 const requestFormat = ` { "UUID": "%s", "Fn": "/%s/Backup", "Body": {} }`
 
-func CMDServiceServiceSnapshotNew(v *viper.Viper) {
+func CMDServiceSnapshotNew(v *viper.Viper) {
 	start := time.Now()
-	core.Log.Warnf("ServiceServiceSnapshotNew: starting")
+	core.Log.Warnf("ServiceSnapshotNew: starting")
 
 	// for each service
 	serviceSpecs := v.GetStringSlice(FLAG_SERVICE)
-	ServiceServiceSnapshotNew(v, serviceSpecs)
+	ServiceSnapshotNew(v, serviceSpecs)
 
 	duration := time.Since(start)
-	core.Log.Warnf("ServiceServiceSnapshotNew: took %s", duration.String())
+	core.Log.Warnf("ServiceSnapshotNew: took %s", duration.String())
 }
 
-func ServiceServiceSnapshotNew(v *viper.Viper, serviceSpecs []string) {
+func ServiceSnapshotNew(v *viper.Viper, serviceSpecs []string) {
 	if len(serviceSpecs) == 0 {
 		core.Log.Fatalf("No services specified.")
 	}
@@ -67,7 +67,7 @@ func ServiceServiceSnapshotNew(v *viper.Viper, serviceSpecs []string) {
 	// parse service specs
 	hostServices, podServices, err := parseServiceSpecs(serviceSpecs)
 	if err != nil {
-		core.Log.Fatalf("ServiceServiceSnapshotNew: %v", err)
+		core.Log.Fatalf("ServiceSnapshotNew: %v", err)
 	}
 
 	// subroutine to do an http request
@@ -85,7 +85,7 @@ func ServiceServiceSnapshotNew(v *viper.Viper, serviceSpecs []string) {
 		if err != nil {
 			core.Log.Error(err)
 		}
-		core.Log.Warnf("ServiceServiceSnapshotNew: %s: %d %s", serviceName, resp.StatusCode, resBody)
+		core.Log.Warnf("ServiceSnapshotNew: %s: %d %s", serviceName, resp.StatusCode, resBody)
 		if err != nil {
 			core.Log.Error(err)
 		}
