@@ -29,6 +29,7 @@ func init() {
 	}
 
 	CMDServerConfig(c, v)
+	CMDKubeConfig(c, v)
 	MAIN.AddCommand(c)
 }
 
@@ -36,8 +37,8 @@ func CMDRestoreOnline(v *viper.Viper) {
 	start := time.Now()
 	core.Log.Warn("RestoreOnline: starting")
 
-	hostport := v.GetString(FLAG_SERVER_HOSTPORT)
-	scheme := v.GetString(FLAG_SERVER_SCHEME)
+	hostport := v.GetString(FLAG_HOSTPORT)
+	scheme := v.GetString(FLAG_PROTOCOL)
 	reqBody := strings.NewReader(fmt.Sprintf(`
 	{
 	  "UUID": "%s",

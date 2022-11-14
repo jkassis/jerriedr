@@ -248,10 +248,10 @@ func (s *ServiceRaftNode) Init() (err error) {
 		TLSKeyFilePath:       s.ServiceHTTPTLSKeyFilePath,
 	}
 	serviceHTTP.Init()
-	serviceHTTP.RouteAdd("/service", s.ServiceRaftable.Handler)
-	serviceHTTP.RouteAdd("/statusAlive", s.ServiceRaftable.StatusAliveHandler)
-	serviceHTTP.RouteAdd("/statusReady", s.ServiceRaftable.StatusReadyHandler)
-	serviceHTTP.RouteAdd("/statusStarted", s.ServiceRaftable.StatusStartedHandler)
+	serviceHTTP.RouteAdd("service", s.ServiceRaftable.Handler)
+	serviceHTTP.RouteAdd("statusAlive", s.ServiceRaftable.StatusAliveHandler)
+	serviceHTTP.RouteAdd("statusReady", s.ServiceRaftable.StatusReadyHandler)
+	serviceHTTP.RouteAdd("statusStarted", s.ServiceRaftable.StatusStartedHandler)
 	s.ServiceHTTP = serviceHTTP
 
 	// ServiceNetRPC
@@ -260,10 +260,10 @@ func (s *ServiceRaftNode) Init() (err error) {
 		Context: s.Context,
 	}
 	serviceNetRPC.Init()
-	serviceNetRPC.RouteAdd("/service", s.ServiceRaftable.Handler)
-	serviceNetRPC.RouteAdd("/statusAlive", s.ServiceRaftable.StatusAliveHandler)
-	serviceNetRPC.RouteAdd("/statusReady", s.ServiceRaftable.StatusReadyHandler)
-	serviceNetRPC.RouteAdd("/statusStarted", s.ServiceRaftable.StatusStartedHandler)
+	serviceNetRPC.RouteAdd("service", s.ServiceRaftable.Handler)
+	serviceNetRPC.RouteAdd("statusAlive", s.ServiceRaftable.StatusAliveHandler)
+	serviceNetRPC.RouteAdd("statusReady", s.ServiceRaftable.StatusReadyHandler)
+	serviceNetRPC.RouteAdd("statusStarted", s.ServiceRaftable.StatusStartedHandler)
 	s.ServiceNetRPC = serviceNetRPC
 
 	// ServiceGRPC

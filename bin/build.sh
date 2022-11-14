@@ -32,4 +32,4 @@
 # windows	386
 # windows	amd64
 
-env go build -o dist/main_linux_arm64 cmd/main.go
+env go build -o dist/main_linux_arm64 cmd/*.go
