@@ -272,16 +272,24 @@ func (f *FileSpec) String() string {
 	return fmt.Sprintf("ns: %s | podName: %s | path: %s", f.PodNamespace, f.PodName, f.File)
 }
 
-// MkDir copies a file from local dir to remote
-func (c *KubeClient) MkDir(src, dest *FileSpec, pod *corev1.Pod, containerName string) (io.Reader, io.Reader, error) {
+// LsOnPod returns a list of files on the pod in the given dir
+func (c *KubeClient) LsOnPod(src *FileSpec, pod *corev1.Pod, containerName string) (io.Reader, io.Reader, error) {
+	srcFile := shellescape.Quote(src.File)
+	cmdArr := []string{"/bin/sh", "-c", "ls " + srcFile}
+	logrus.Info("ls " + srcFile + " in pod : '" + pod.Name + "'")
+	return c.Exec(pod, containerName, cmdArr, nil)
+}
+
+// MkDirOnPod copies a file from local dir to remote
+func (c *KubeClient) MkDirOnPod(src, dest *FileSpec, pod *corev1.Pod, containerName string) (io.Reader, io.Reader, error) {
 	destFile := shellescape.Quote(dest.File)
 	cmdArr := []string{"/bin/sh", "-c", "mkdir -p " + destFile}
 	logrus.Info("making directory in pod : '" + pod.Name + "'")
 	return c.Exec(pod, containerName, cmdArr, nil)
 }
 
-// Copy copies a file from local dir to remote
-func (c *KubeClient) Copy(src, dest *FileSpec, pod *corev1.Pod, containerName string) (io.Reader, io.Reader, error) {
+// CopyToPod copies a file from local dir to remote
+func (c *KubeClient) CopyToPod(src, dest *FileSpec, pod *corev1.Pod, containerName string) (io.Reader, io.Reader, error) {
 	destFile := shellescape.Quote(dest.File)
 	srcFile, err := os.Open(src.File)
 	if err != nil {
@@ -309,8 +317,8 @@ func (c *KubeClient) CopyFromPod(src, dst *FileSpec, pod *corev1.Pod, containerN
 	return ioutil.WriteFile(dst.File, []byte(stdout), 0644)
 }
 
-// Rm removes a file from a remote
-func (c *KubeClient) Rm(dst *FileSpec, pod *corev1.Pod, containerName string) (io.Reader, io.Reader, error) {
+// RmFromPod removes a file from a remote
+func (c *KubeClient) RmFromPod(dst *FileSpec, pod *corev1.Pod, containerName string) (io.Reader, io.Reader, error) {
 	cmdArr := []string{"/bin/sh", "-c", "rm -rf " + dst.File}
 	fmt.Println(strings.Join(cmdArr, " "))
 	return c.Exec(pod, containerName, cmdArr, nil)

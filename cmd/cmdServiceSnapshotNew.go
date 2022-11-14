@@ -38,7 +38,7 @@ func init() {
 
 	// CLI Command with flag parsing
 	c := &cobra.Command{
-		Use:   "servicebackup",
+		Use:   "servicesnapshotnew",
 		Short: "Backup services using http backup reqeusts",
 		Long: `This command is equivalent to the following curl call against the requested services
 
@@ -48,7 +48,7 @@ eg..
 curl -d '{ "UUID": "9db4caec-a449-4082-a1c3-ac82b4d25444", "Fn": "/v1/Backup", "Body": {} }' -H 'Content-Type: application/json' http://dockie-0.dockie-int.fg.svc.cluster.local:10000/raft/leader/read
 `,
 		Run: func(cmd *cobra.Command, args []string) {
-			CMDBackupRemote(v)
+			CMDServiceSnapshotNew(v)
 		},
 	}
 
@@ -107,19 +107,19 @@ func (s ServiceSpec) PortGet() (int, error) {
 	return port, nil
 }
 
-func CMDBackupRemote(v *viper.Viper) {
+func CMDServiceSnapshotNew(v *viper.Viper) {
 	start := time.Now()
 	core.Log.Warnf("BackupRemote: starting")
 
 	// for each service
 	serviceSpecs := v.GetStringSlice(FLAG_SERVICE)
-	BackupFromServiceSpecs(v, serviceSpecs)
+	ServiceBackupNew(v, serviceSpecs)
 
 	duration := time.Since(start)
 	core.Log.Warnf("BackupRemote: took %s", duration.String())
 }
 
-func BackupFromServiceSpecs(v *viper.Viper, serviceSpecs []string) {
+func ServiceBackupNew(v *viper.Viper, serviceSpecs []string) {
 	if len(serviceSpecs) == 0 {
 		core.Log.Fatalf("No services specified.")
 	}

@@ -14,11 +14,11 @@ func init() {
 
 	// CLI Command with flag parsing
 	c := &cobra.Command{
-		Use:   "clusterbackup",
+		Use:   "clustersnapshotnew",
 		Short: "Backup cluster services using http backup reqeusts",
 		Long:  `This command is a shortcut for backupremote.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			CMDClusterBackup(v)
+			CMDClusterSnapshotNew(v)
 		},
 	}
 
@@ -30,16 +30,16 @@ func init() {
 	MAIN.AddCommand(c)
 }
 
-func CMDClusterBackup(v *viper.Viper) {
+func CMDClusterSnapshotNew(v *viper.Viper) {
 	start := time.Now()
-	core.Log.Warnf("BackupCluster: starting")
+	core.Log.Warnf("ClusterBackup: starting")
 
 	// for each service
 	serviceSpecs := []string{
 		"kube|fg/dockie-0:10000",
 	}
-	BackupFromServiceSpecs(v, serviceSpecs)
+	ServiceBackupNew(v, serviceSpecs)
 
 	duration := time.Since(start)
-	core.Log.Warnf("BackupCluster: took %s", duration.String())
+	core.Log.Warnf("ClusterBackup: took %s", duration.String())
 }

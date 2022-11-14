@@ -15,8 +15,8 @@ func init() {
 
 	// CLI Command with flag parsing
 	c := &cobra.Command{
-		Use:   "badgerrestore",
-		Short: "Restore a Badger DB from STDIN",
+		Use:   "badgersnapshotput",
+		Short: "Restore a snapshot of a Badger DB from STDIN",
 		// Long:  ``,
 		Run: func(cmd *cobra.Command, args []string) {
 			CMDBadgerRestore(v)

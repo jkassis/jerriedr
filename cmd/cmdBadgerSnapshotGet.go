@@ -15,11 +15,11 @@ func init() {
 
 	// CLI Command with flag parsing
 	c := &cobra.Command{
-		Use:   "badgerbackup",
-		Short: "Backup a badger DB to STDOUT",
+		Use:   "badgersnapshotget",
+		Short: "Take a snapshot of a badger DB and dumpt to STDOUT",
 		// Long:  ``,
 		Run: func(cmd *cobra.Command, args []string) {
-			CMDBadgerBackup(v)
+			CMDBadgerSnapshotGet(v)
 		},
 	}
 
@@ -27,7 +27,7 @@ func init() {
 	MAIN.AddCommand(c)
 }
 
-func CMDBadgerBackup(v *viper.Viper) {
+func CMDBadgerSnapshotGet(v *viper.Viper) {
 	dbBadger := CMDDBRun(v)
 	stream := dbBadger.DB.NewStream()
 

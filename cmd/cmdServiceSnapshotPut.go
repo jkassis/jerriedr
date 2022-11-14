@@ -20,11 +20,11 @@ func init() {
 
 	// CLI Command with flag parsing
 	c := &cobra.Command{
-		Use:   "servicerestore",
-		Short: "Restore the DB from the permanent DB data restore directory",
+		Use:   "servicesnapshotput",
+		Short: "Restore a snapshot of multiple services from snapshots in a local folder.",
 		// Long:  ``,
 		Run: func(cmd *cobra.Command, args []string) {
-			CMDServiceRestore(v)
+			CMDServiceSSPut(v)
 		},
 	}
 
@@ -33,7 +33,7 @@ func init() {
 	MAIN.AddCommand(c)
 }
 
-func CMDServiceRestore(v *viper.Viper) {
+func CMDServiceSSPut(v *viper.Viper) {
 	start := time.Now()
 	core.Log.Warn("RestoreOnline: starting")
 

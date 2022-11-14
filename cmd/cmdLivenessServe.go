@@ -18,14 +18,14 @@ func init() {
 		Short: "Serves liveness for images built with Jerrie DR.",
 		// Long:  ``,
 		Run: func(cmd *cobra.Command, args []string) {
-			CMDServe(v)
+			CMDLivenessServe(v)
 		},
 	}
 
 	MAIN.AddCommand(c)
 }
 
-func CMDServe(v *viper.Viper) {
+func CMDLivenessServe(v *viper.Viper) {
 	fmt.Printf("Serving liveness on 10000")
 	statusHandler := func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
