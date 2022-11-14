@@ -20,11 +20,11 @@ func init() {
 
 	// CLI Command with flag parsing
 	c := &cobra.Command{
-		Use:   "restoreonline",
+		Use:   "servicerestore",
 		Short: "Restore the DB from the permanent DB data restore directory",
 		// Long:  ``,
 		Run: func(cmd *cobra.Command, args []string) {
-			CMDRestoreOnline(v)
+			CMDServiceRestore(v)
 		},
 	}
 
@@ -33,18 +33,13 @@ func init() {
 	MAIN.AddCommand(c)
 }
 
-func CMDRestoreOnline(v *viper.Viper) {
+func CMDServiceRestore(v *viper.Viper) {
 	start := time.Now()
 	core.Log.Warn("RestoreOnline: starting")
 
 	hostport := v.GetString(FLAG_HOSTPORT)
 	scheme := v.GetString(FLAG_PROTOCOL)
-	reqBody := strings.NewReader(fmt.Sprintf(`
-	{
-	  "UUID": "%s",
-	  "Fn": "/v1/Restore",
-	  "Body": {}
-	}`, uuid.NewString()))
+	reqBody := strings.NewReader(fmt.Sprintf(` { "UUID": "%s", "Fn": "/v1/Restore", "Body": {} }`, uuid.NewString()))
 
 	req, err := http.NewRequest("POST", fmt.Sprintf("%s://%s/raft/leader/write", scheme, hostport), reqBody)
 	if err != nil {

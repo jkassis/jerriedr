@@ -14,8 +14,8 @@ func init() {
 
 	// CLI Command with flag parsing
 	c := &cobra.Command{
-		Use:   "serve",
-		Short: "Serves liveness for jerrie services.",
+		Use:   "livenessserve",
+		Short: "Serves liveness for images built with Jerrie DR.",
 		// Long:  ``,
 		Run: func(cmd *cobra.Command, args []string) {
 			CMDServe(v)

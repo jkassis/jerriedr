@@ -15,11 +15,11 @@ func init() {
 
 	// CLI Command with flag parsing
 	c := &cobra.Command{
-		Use:   "restore",
-		Short: "Restore the DB from STDIN",
+		Use:   "badgerrestore",
+		Short: "Restore a Badger DB from STDIN",
 		// Long:  ``,
 		Run: func(cmd *cobra.Command, args []string) {
-			CMDRestore(v)
+			CMDBadgerRestore(v)
 		},
 	}
 
@@ -27,16 +27,16 @@ func init() {
 	MAIN.AddCommand(c)
 }
 
-func CMDRestore(v *viper.Viper) {
+func CMDBadgerRestore(v *viper.Viper) {
 	dbBadger := CMDDBRun(v)
 
 	start := time.Now()
-	core.Log.Warn("Restore: starting")
+	core.Log.Warn("BadgerRestore: starting")
 	err := dbBadger.DB.Load(os.Stdin, 256)
 	if err != nil {
 		core.Log.Error(err)
 		return
 	}
 	duration := time.Since(start)
-	core.Log.Warnf("Restore: took %s", duration.String())
+	core.Log.Warnf("BadgerRestore: took %s", duration.String())
 }

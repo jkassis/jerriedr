@@ -14,11 +14,11 @@ func init() {
 
 	// CLI Command with flag parsing
 	c := &cobra.Command{
-		Use:   "backupcluster",
+		Use:   "clusterbackup",
 		Short: "Backup cluster services using http backup reqeusts",
 		Long:  `This command is a shortcut for backupremote.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			CMDBackupCluster(v)
+			CMDClusterBackup(v)
 		},
 	}
 
@@ -30,7 +30,7 @@ func init() {
 	MAIN.AddCommand(c)
 }
 
-func CMDBackupCluster(v *viper.Viper) {
+func CMDClusterBackup(v *viper.Viper) {
 	start := time.Now()
 	core.Log.Warnf("BackupCluster: starting")
 

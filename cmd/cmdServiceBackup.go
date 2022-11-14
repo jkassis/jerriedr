@@ -38,7 +38,7 @@ func init() {
 
 	// CLI Command with flag parsing
 	c := &cobra.Command{
-		Use:   "backupremote",
+		Use:   "servicebackup",
 		Short: "Backup services using http backup reqeusts",
 		Long: `This command is equivalent to the following curl call against the requested services
 
