@@ -122,9 +122,6 @@ func ServiceSnapshotGet(v *viper.Viper, serviceSpecs []string) {
 				core.Log.Errorf("error getting file %s: %v", fileFullPath, err)
 				return
 			}
-
-			// warn
-			core.Log.Warnf("files: %v", files)
 		}(service)
 	}
 

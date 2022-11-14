@@ -2,6 +2,7 @@ package kube
 
 import (
 	"archive/tar"
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -22,6 +23,7 @@ import (
 	"github.com/alessio/shellescape"
 	"github.com/jkassis/jerrie/core"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sync/errgroup"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -302,20 +304,55 @@ func (c *KubeClient) CopyToPod(src, dest *FileSpec, pod *corev1.Pod, containerNa
 
 // CopyFromPod copies a file from remote dir to a local
 func (c *KubeClient) CopyFromPod(src, dst *FileSpec, pod *corev1.Pod, containerName string) error {
-	srcFile := shellescape.Quote(src.File)
-
-	var cmdArr []string
-	var stdout string
 	var err error
 
-	cmdArr = []string{"env", "cat", srcFile}
-	logrus.Infof("copying from pod : %s %s", pod.Name, src.String())
-	stdout, err = c.ExecSync(pod, containerName, cmdArr, nil)
+	// open the dstFile
+	f, err := os.OpenFile(dst.File, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		return err
 	}
+	defer func() {
+		f.Sync()
+		f.Close()
+	}()
+
+	// start reading
+	srcFile := shellescape.Quote(src.File)
+	cmdArr := []string{"env", "cat", srcFile}
+	logrus.Infof("copying from pod : %s %s", pod.Name, src.String())
+	stdoutReader, stderrReader, err := c.Exec(pod, "", cmdArr, nil)
+	if err != nil {
+		return err
+	}
+
+	errs := &errgroup.Group{}
+
+	// stream to dst
+	errs.Go(func() error {
+		_, err = io.Copy(f, stdoutReader)
+		return err
+	})
+
+	// stream to err
+	errs.Go(func() error {
+		stderr := bytes.NewBuffer(nil)
+		_, err = io.Copy(stderr, stderrReader)
+		if err != nil {
+			return err
+		}
+		if stderr.Len() > 0 {
+			return fmt.Errorf("CopyFromPod: got data from stderr: %v", stderr)
+		}
+		return nil
+	})
+
+	err = errs.Wait()
+	if err != nil {
+		return err
+	}
+
 	logrus.Infof("copy complete: %s %s", pod.Name, srcFile)
-	return ioutil.WriteFile(dst.File, []byte(stdout), 0644)
+	return nil
 }
 
 // RmFromPod removes a file from a remote
