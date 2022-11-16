@@ -24,8 +24,9 @@ func init() {
 		},
 	}
 
-	// kube
+	// flag configuration
 	CMDKubeConfig(c, v)
+	CMDSnapshotArchiveDir(c, v)
 
 	// services
 	c.PersistentFlags().StringP(FLAG_SERVICE, "s", "", "a <host>:<port> that responds to requests at '<host>:<port>/<version>/backup' by placing backup files in /var/data/single/<host>-<port>-server-0/backup/<timestamp>.bak")

@@ -37,6 +37,8 @@ const (
 	FLAG_HOSTPORT         = "serverHostport"
 	FLAG_PROTOCOL         = "protocol"
 	FLAG_VERSION          = "version"
+	FLAG_SNAPSHOT_ARCHIVE = "archiveArchive"
+	FLAG_RESTORE_ARCHIVE  = "restoreArchive"
 )
 
 func CMDDBConfig(c *cobra.Command, v *viper.Viper) {
@@ -70,6 +72,18 @@ func CMDProtocolConfig(c *cobra.Command, v *viper.Viper) {
 func CMDVersionConfig(c *cobra.Command, v *viper.Viper) {
 	c.PersistentFlags().StringP(FLAG_VERSION, "v", "v1", "backup protocol version")
 	v.BindPFlag(FLAG_VERSION, c.PersistentFlags().Lookup(FLAG_VERSION))
+}
+
+func CMDSnapshotArchiveDir(c *cobra.Command, v *viper.Viper) {
+	c.PersistentFlags().StringP(FLAG_SNAPSHOT_ARCHIVE, "sa", "/tmp/jerrie/snapshots", "snapshot archive")
+	c.MarkPersistentFlagRequired(FLAG_SNAPSHOT_ARCHIVE)
+	v.BindPFlag(FLAG_SNAPSHOT_ARCHIVE, c.PersistentFlags().Lookup(FLAG_SNAPSHOT_ARCHIVE))
+}
+
+func CMDRestoreArchiveDir(c *cobra.Command, v *viper.Viper) {
+	c.PersistentFlags().StringP(FLAG_RESTORE_ARCHIVE, "ra", "/tmp/jerrie/restore", "restore archive")
+	c.MarkPersistentFlagRequired(FLAG_RESTORE_ARCHIVE)
+	v.BindPFlag(FLAG_RESTORE_ARCHIVE, c.PersistentFlags().Lookup(FLAG_RESTORE_ARCHIVE))
 }
 
 func KubeClientGet(v *viper.Viper) (*kube.KubeClient, error) {

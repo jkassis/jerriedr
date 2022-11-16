@@ -28,8 +28,10 @@ func init() {
 		},
 	}
 
+	// flag configuration
 	CMDServerConfig(c, v)
 	CMDKubeConfig(c, v)
+
 	MAIN.AddCommand(c)
 }
 
