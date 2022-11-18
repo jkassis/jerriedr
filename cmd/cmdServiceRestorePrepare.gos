@@ -24,9 +24,9 @@ func init() {
 	}
 
 	// flag configuration
-	CMDKubeConfig(c, v)
-	CMDSnapshotArchiveDir(c, v)
-	CMDRestoreArchiveDir(c, v)
+	FlagsAddKubeFlags(c, v)
+	FlagsAddSrcArchiveFlag(c, v)
+	FlagsAddRestoreArchivesDir(c, v)
 
 	// this flag represents the time target for selecting snapshots
 	c.PersistentFlags().StringP(FLAG_TIME_TARGET, "t", "now", "a time target for selecting snapshots to restore")
@@ -48,15 +48,20 @@ func CMDserviceRestorePrepare(v *viper.Viper) {
 	core.Log.Warnf("serviceRestorePrepare: took %s", duration.String())
 }
 
-func serviceRestorePrepare(v *viper.Viper, snapshotArchivesSpecs []string, restoreArchiveSpecs string) {
-	if len(snapshotArchivesSpecs) == 0 {
-		core.Log.Fatalf("No services specified.")
+func serviceRestorePrepare(v *viper.Viper, snapshotArchiveSpecs []string, restoreArchiveSpec string) {
+	if len(snapshotArchiveSpecs) == 0 {
+		core.Log.Fatalf("No snapshot archives specified.")
 	}
 
-	// parse service specs
-	hostServices, podServices, err := parseServiceSpecs(serviceSpecs)
+	// parse snapshot archive specs
+	hostSnapshotArchives, podSnapshotArchives, err := parseArchiveSpecs(snapshotArchiveSpecs)
 	if err != nil {
-		core.Log.Fatalf("serviceRestorePrepare: %v", err)
+		core.Log.Fatalf("serviceRestorePrepare: trouble parsing snapshotArchives %v", err)
+	}
+
+	hostRestoreArchive, podRestoreArchive, err := parseArchiveSpec(restoreArchiveSpec)
+	if err != nil {
+		core.Log.Fatalf("serviceRestorePrepare: trouble parsing restoreArchives %v", err)
 	}
 
 	// establish a WaitGroup

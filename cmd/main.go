@@ -37,17 +37,18 @@ const (
 	FLAG_HOSTPORT         = "serverHostport"
 	FLAG_PROTOCOL         = "protocol"
 	FLAG_VERSION          = "version"
-	FLAG_SNAPSHOT_ARCHIVE = "archiveArchive"
+	FLAG_SRC_ARCHIVE      = "srcArchive"
+	FLAG_DST_ARCHIVE      = "dstArchive"
 	FLAG_RESTORE_ARCHIVE  = "restoreArchive"
 )
 
-func CMDDBConfig(c *cobra.Command, v *viper.Viper) {
+func FlagsAddDBFlags(c *cobra.Command, v *viper.Viper) {
 	c.PersistentFlags().StringP(FLAG_DB_DIR, "d", "", "database dir")
 	c.MarkPersistentFlagRequired(FLAG_DB_DIR)
 	v.BindPFlag(FLAG_DB_DIR, c.PersistentFlags().Lookup(FLAG_DB_DIR))
 }
 
-func CMDKubeConfig(c *cobra.Command, v *viper.Viper) {
+func FlagsAddKubeFlags(c *cobra.Command, v *viper.Viper) {
 	c.PersistentFlags().StringP(FLAG_KUBE_CONFIG_PATH, "c", "", "absolute path to the kubernetes config file")
 	// c.MarkPersistentFlagRequired(FLAG_KUBE)
 	v.BindPFlag(FLAG_KUBE_CONFIG_PATH, c.PersistentFlags().Lookup(FLAG_KUBE_CONFIG_PATH))
@@ -57,30 +58,36 @@ func CMDKubeConfig(c *cobra.Command, v *viper.Viper) {
 	v.BindPFlag(FLAG_KUBE_MASTER_URL, c.PersistentFlags().Lookup(FLAG_KUBE_MASTER_URL))
 }
 
-func CMDServerConfig(c *cobra.Command, v *viper.Viper) {
+func FlagsAddHostFlags(c *cobra.Command, v *viper.Viper) {
 	c.PersistentFlags().StringP(FLAG_HOSTPORT, "u", "localhost:10000", "server hostport")
 	// c.MarkPersistentFlagRequired(FLAG_SERVER_HOSTPORT)
 	v.BindPFlag(FLAG_HOSTPORT, c.PersistentFlags().Lookup(FLAG_HOSTPORT))
 }
 
-func CMDProtocolConfig(c *cobra.Command, v *viper.Viper) {
+func FlagsAddProtocolFlag(c *cobra.Command, v *viper.Viper) {
 	c.PersistentFlags().StringP(FLAG_PROTOCOL, "p", "http", "protocol: http | https")
 	// c.MarkPersistentFlagRequired(FLAG_PROTOCOL)
 	v.BindPFlag(FLAG_PROTOCOL, c.PersistentFlags().Lookup(FLAG_PROTOCOL))
 }
 
-func CMDVersionConfig(c *cobra.Command, v *viper.Viper) {
+func FlagsAddAPIVersionFlag(c *cobra.Command, v *viper.Viper) {
 	c.PersistentFlags().StringP(FLAG_VERSION, "v", "v1", "backup protocol version")
 	v.BindPFlag(FLAG_VERSION, c.PersistentFlags().Lookup(FLAG_VERSION))
 }
 
-func CMDSnapshotArchiveDir(c *cobra.Command, v *viper.Viper) {
-	c.PersistentFlags().StringP(FLAG_SNAPSHOT_ARCHIVE, "sa", "/tmp/jerrie/snapshots", "snapshot archive")
-	c.MarkPersistentFlagRequired(FLAG_SNAPSHOT_ARCHIVE)
-	v.BindPFlag(FLAG_SNAPSHOT_ARCHIVE, c.PersistentFlags().Lookup(FLAG_SNAPSHOT_ARCHIVE))
+func FlagsAddSrcArchiveFlag(c *cobra.Command, v *viper.Viper) {
+	c.PersistentFlags().StringP(FLAG_SRC_ARCHIVE, "sa", "", "source archive")
+	c.MarkPersistentFlagRequired(FLAG_SRC_ARCHIVE)
+	v.BindPFlag(FLAG_SRC_ARCHIVE, c.PersistentFlags().Lookup(FLAG_SRC_ARCHIVE))
 }
 
-func CMDRestoreArchiveDir(c *cobra.Command, v *viper.Viper) {
+func FlagsAddDstArchiveFlag(c *cobra.Command, v *viper.Viper) {
+	c.PersistentFlags().StringP(FLAG_DST_ARCHIVE, "da", "", "destination archive")
+	c.MarkPersistentFlagRequired(FLAG_DST_ARCHIVE)
+	v.BindPFlag(FLAG_DST_ARCHIVE, c.PersistentFlags().Lookup(FLAG_DST_ARCHIVE))
+}
+
+func FlagsAddRestoreArchivesDir(c *cobra.Command, v *viper.Viper) {
 	c.PersistentFlags().StringP(FLAG_RESTORE_ARCHIVE, "ra", "/tmp/jerrie/restore", "restore archive")
 	c.MarkPersistentFlagRequired(FLAG_RESTORE_ARCHIVE)
 	v.BindPFlag(FLAG_RESTORE_ARCHIVE, c.PersistentFlags().Lookup(FLAG_RESTORE_ARCHIVE))

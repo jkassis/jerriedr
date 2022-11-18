@@ -11,20 +11,19 @@ import (
 
 const FLAG_SERVICE = "service"
 
-func CMDServiceConfig(c *cobra.Command, v *viper.Viper) {
-	c.PersistentFlags().StringP(FLAG_SERVICE, "s", "", "a <host>:<port> that responds to requests at '<host>:<port>/<version>/backup' by placing backup files in /var/data/single/<host>-<port>-server-0/backup/<timestamp>.bak")
+func FlagsAddServiceFlag(c *cobra.Command, v *viper.Viper) {
+	c.PersistentFlags().StringP(FLAG_SERVICE, "sr", "", "a <host>:<port> that responds to requests at '<host>:<port>/<version>/backup' by placing backup files in /var/data/single/<host>-<port>-server-0/backup/<timestamp>.bak")
+	c.MarkPersistentFlagRequired(FLAG_SERVICE)
 	v.BindPFlag(FLAG_SERVICE, c.PersistentFlags().Lookup(FLAG_SERVICE))
 }
 
 type HostService struct {
-	Dir  string
 	Host string
 	Port int
 	Spec string
 }
 
 type PodService struct {
-	Dir          string
 	PodName      string
 	PodNamespace string
 	PodPort      int
@@ -84,11 +83,6 @@ func (s ServiceSpec) NamespaceGet() string {
 	return parts[0]
 }
 
-func (s ServiceSpec) DirGet() string {
-	parts := strings.Split(string(s), "|")
-	return parts[2]
-}
-
 func (s ServiceSpec) PortGet() (int, error) {
 	parts := strings.Split(string(s), "|")
 	parts = strings.Split(parts[1], "/")
@@ -123,7 +117,6 @@ func parseServiceSpecs(serviceSpecs []string) ([]*HostService, []*PodService, er
 					PodNamespace: serviceSpec.NamespaceGet(),
 					PodPort:      podPort,
 					Spec:         serviceSpecString,
-					Dir:          serviceSpec.DirGet(),
 				})
 		} else if serviceSpec.IsHost() {
 			// no.
@@ -136,7 +129,6 @@ func parseServiceSpecs(serviceSpecs []string) ([]*HostService, []*PodService, er
 					Host: serviceSpec.HostGet(),
 					Port: port,
 					Spec: serviceSpecString,
-					Dir:  serviceSpec.DirGet(),
 				})
 		} else {
 			return nil, nil, fmt.Errorf("serviceSpec type must be pod|host: %v", serviceSpec)
@@ -144,54 +136,4 @@ func parseServiceSpecs(serviceSpecs []string) ([]*HostService, []*PodService, er
 	}
 
 	return hostServices, podServices, nil
-}
-
-// ArchiveSpec is a string that represents an archive... local or in kube
-// archiveSpec => <podSpec> | <hostSpec>
-// podSpec => pod|<ns>/<pod>|<path>
-// hostSpec => host|<hostname>|<path>
-//
-// Better...
-// podSpec => pod://<ns>/<pod>/<path>
-// hostSpec => host://<hostname>/<path>
-type ArchiveSpec string
-
-func (s ArchiveSpec) IsKube() bool {
-	return strings.HasPrefix(string(s), "kube|")
-}
-
-func (s ArchiveSpec) IsValid() bool {
-	// TODO could get more complex with the validation
-	if s.IsKube() {
-		return strings.Contains(string(s), "/") && strings.Contains(string(s), ":")
-	} else {
-		return strings.Contains(string(s), ":")
-	}
-}
-
-func (s ArchiveSpec) HostGet() string {
-	parts := strings.Split(string(s), ":")
-	return parts[0]
-}
-
-func (s ArchiveSpec) PodGet() string {
-	tail := string(s)[5:]
-	parts := strings.Split(tail, "/")
-	parts = strings.Split(parts[1], ":")
-	return parts[0]
-}
-
-func (s ArchiveSpec) NamespaceGet() string {
-	tail := string(s)[5:]
-	parts := strings.Split(tail, "/")
-	return parts[0]
-}
-
-func (s ArchiveSpec) DirGet() (int, error) {
-	parts := strings.Split(string(s), ":")
-	port, err := strconv.Atoi(parts[1])
-	if err != nil {
-		return 0, fmt.Errorf("bad port in %s: %v", string(s), err)
-	}
-	return port, nil
 }

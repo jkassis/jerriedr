@@ -28,7 +28,7 @@ func init() {
 		},
 	}
 
-	CMDDBConfig(c, v)
+	FlagsAddDBFlags(c, v)
 
 	c.PersistentFlags().IntP(FLAG_INDEX, "i", 0, "target index")
 	c.MarkPersistentFlagRequired(FLAG_INDEX)

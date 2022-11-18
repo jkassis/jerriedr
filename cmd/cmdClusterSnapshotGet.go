@@ -6,6 +6,7 @@ import (
 	"github.com/jkassis/jerrie/core"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"golang.org/x/sync/errgroup"
 )
 
 func init() {
@@ -15,15 +16,15 @@ func init() {
 	// CLI Command with flag parsing
 	c := &cobra.Command{
 		Use:   "clustersnapshotget",
-		Short: "Retrieve a snapshot of cluster services and save to a local file.",
-		Long:  `This command is a shortcut for backupremote.`,
+		Short: "Retrieve a snapshot of cluster services and save to a local archive.",
+		Long:  `This command is a shortcut for servicesnapshotcopy with several presets.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			CMDClusterSnapshotGet(v)
 		},
 	}
 
 	// kube
-	CMDKubeConfig(c, v)
+	FlagsAddKubeFlags(c, v)
 
 	// localDir
 	MAIN.AddCommand(c)
@@ -33,8 +34,26 @@ func CMDClusterSnapshotGet(v *viper.Viper) {
 	start := time.Now()
 	core.Log.Warnf("ClusterSnapshotGet: starting")
 
-	serviceSpecs := []string{"pod|fg/dockie-0:10000|/var/data/single/dockie-0-server-0"}
-	ServiceSnapshotGet(v, serviceSpecs)
+	srcArchiveSpecs := []string{
+		"pod|fg/dockie-0|/var/data/single/dockie-0-server-0",
+		"pod|fg/ledgie-0|/var/data/single/ledgie-0-server-0",
+	}
+
+	dstArchiveSpec := "host|localhost|/var/cluster"
+
+	errGroup := errgroup.Group{}
+	for _, srcArchiveSpec := range srcArchiveSpecs {
+		srcArchiveSpec := srcArchiveSpec
+		errGroup.Go(func() error {
+			return ServiceSnapshotCopy(v, srcArchiveSpec, dstArchiveSpec)
+		})
+	}
+
+	err := errGroup.Wait()
+	if err != nil {
+		core.Log.Error(err)
+	}
+
 	duration := time.Since(start)
 	core.Log.Warnf("ClusterSnapshotGet: took %s", duration.String())
 }

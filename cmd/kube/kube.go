@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -120,9 +119,9 @@ func (c *KubeClient) DeploymentsGet(namespace string, pattern string) ([]string,
 func (c *KubeClient) GetPod(podName, namespace string) (*corev1.Pod, error) {
 	pod, err := c.Clientset.CoreV1().Pods(namespace).Get(context.Background(), podName, metav1.GetOptions{})
 	if k8sErrors.IsNotFound(err) {
-		return nil, fmt.Errorf("Pod %s in namespace %s not found\n", pod, namespace)
+		return nil, fmt.Errorf("pod %s in namespace %s not found", pod, namespace)
 	} else if statusError, isStatus := err.(*k8sErrors.StatusError); isStatus {
-		return nil, fmt.Errorf("Error getting pod %s in namespace %s: %v\n", podName, namespace, statusError.ErrStatus.Message)
+		return nil, fmt.Errorf("error getting pod %s in namespace %s: %v", podName, namespace, statusError.ErrStatus.Message)
 	} else if err != nil {
 		return nil, err
 	}
@@ -166,7 +165,7 @@ func (c *KubeClient) GetRandomPod(namespace, deploymentName string) (*corev1.Pod
 		return nil, err
 	}
 	if len(podList.Items) == 0 {
-		return nil, errors.New("Found no pods")
+		return nil, errors.New("found no pods")
 	}
 	logrus.Infof("Got %d pods for %s/%s\n", len(podList.Items), namespace, deploymentName)
 
@@ -224,6 +223,10 @@ func (c *KubeClient) Exec(
 // returns the output from stdout or err as a string and err
 func (c *KubeClient) ExecSync(pod *corev1.Pod, containerName string, command []string, stdin io.Reader) (string, error) {
 	stdoutReader, stderrReader, err := c.Exec(pod, containerName, command, stdin)
+	if err != nil {
+		return "", err
+	}
+
 	results, err := ReadAll(stdoutReader, stderrReader)
 	if err != nil {
 		return "", err
@@ -290,37 +293,22 @@ func (c *KubeClient) MkDirOnPod(src, dest *FileSpec, pod *corev1.Pod, containerN
 	return c.Exec(pod, containerName, cmdArr, nil)
 }
 
-// CopyToPod copies a file from local dir to remote
-func (c *KubeClient) CopyToPod(src, dest *FileSpec, pod *corev1.Pod, containerName string) (io.Reader, io.Reader, error) {
-	destFile := shellescape.Quote(dest.File)
-	srcFile, err := os.Open(src.File)
-	if err != nil {
-		return nil, nil, err
-	}
-	cmdArr := []string{"/bin/sh", "-c", "mkdir -p " + filepath.Dir(destFile) + " ; cat > " + destFile}
-	logrus.Info("copying to pod : '" + pod.Name + "'")
-	return c.Exec(pod, containerName, cmdArr, srcFile)
-}
+// FileWriterGet gets a writer to a file on a pod
+// Use this to open a file and stream to the writer
+// f, err := os.Open(src.File)
+//
+//	if err != nil {
+//		return err
+//	}
+//
+// defer f.Close()
+// io.Copy(dstWriter, srcFile)
+func (c *KubeClient) FileWrite(src io.Reader, dst *FileSpec, pod *corev1.Pod, containerName string) (err error) {
+	dstFile := shellescape.Quote(dst.File)
+	// cmdArr := []string{"/bin/sh", "-c", "mkdir -p " + filepath.Dir(dstFile) + " ; cat > " + dstFile}
+	cmdArr := []string{"env", "cat", ">", dstFile}
 
-// CopyFromPod copies a file from remote dir to a local
-func (c *KubeClient) CopyFromPod(src, dst *FileSpec, pod *corev1.Pod, containerName string) error {
-	var err error
-
-	// open the dstFile
-	f, err := os.OpenFile(dst.File, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		f.Sync()
-		f.Close()
-	}()
-
-	// start reading
-	srcFile := shellescape.Quote(src.File)
-	cmdArr := []string{"env", "cat", srcFile}
-	logrus.Infof("copying from pod : %s %s", pod.Name, src.String())
-	stdoutReader, stderrReader, err := c.Exec(pod, "", cmdArr, nil)
+	stdoutReader, stderrReader, err := c.Exec(pod, containerName, cmdArr, src)
 	if err != nil {
 		return err
 	}
@@ -329,7 +317,64 @@ func (c *KubeClient) CopyFromPod(src, dst *FileSpec, pod *corev1.Pod, containerN
 
 	// stream to dst
 	errs.Go(func() error {
-		_, err = io.Copy(f, stdoutReader)
+		stdout := bytes.NewBuffer(nil)
+		_, err = io.Copy(stdout, stdoutReader)
+		if err != nil {
+			return err
+		}
+		if stdout.Len() > 0 {
+			return fmt.Errorf("FileWrite: got data from stdout: %v", stdout)
+		}
+
+		return err
+	})
+
+	// stream to err
+	errs.Go(func() error {
+		stderr := bytes.NewBuffer(nil)
+		_, err = io.Copy(stderr, stderrReader)
+		if err != nil {
+			return err
+		}
+		if stderr.Len() > 0 {
+			return fmt.Errorf("FileWrite: got data from stderr: %v", stderr)
+		}
+		return nil
+	})
+
+	err = errs.Wait()
+	return err
+}
+
+// FileReaderGet gets a reader to a file on a pod
+// Use this to write to a local file...
+// // open the dstFile
+// f, err := os.OpenFile(dst.File, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+//
+//	if err != nil {
+//		return err
+//	}
+//
+//	defer func() {
+//		f.Sync()
+//		f.Close()
+//	}()
+//
+// io.Copy(dstFile, reader)
+func (c *KubeClient) FileRead(src *FileSpec, dst io.Writer, pod *corev1.Pod, containerName string) (err error) {
+	srcFile := shellescape.Quote(src.File)
+	cmdArr := []string{"env", "cat", srcFile}
+
+	stdoutReader, stderrReader, err := c.Exec(pod, containerName, cmdArr, nil)
+	if err != nil {
+		return err
+	}
+
+	errs := &errgroup.Group{}
+
+	// stream to dst
+	errs.Go(func() error {
+		_, err = io.Copy(dst, stdoutReader)
 		return err
 	})
 
@@ -347,12 +392,7 @@ func (c *KubeClient) CopyFromPod(src, dst *FileSpec, pod *corev1.Pod, containerN
 	})
 
 	err = errs.Wait()
-	if err != nil {
-		return err
-	}
-
-	logrus.Infof("copy complete: %s %s", pod.Name, srcFile)
-	return nil
+	return err
 }
 
 // RmFromPod removes a file from a remote
@@ -386,7 +426,7 @@ func recursiveTar(srcBase, srcFile, destBase, destFile string, tw *tar.Writer) e
 			return err
 		}
 		if stat.IsDir() {
-			files, err := ioutil.ReadDir(fpath)
+			files, err := os.ReadDir(fpath)
 			if err != nil {
 				return err
 			}

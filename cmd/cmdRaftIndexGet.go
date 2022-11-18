@@ -24,7 +24,7 @@ func init() {
 		},
 	}
 
-	CMDDBConfig(c, v)
+	FlagsAddDBFlags(c, v)
 	MAIN.AddCommand(c)
 }
 

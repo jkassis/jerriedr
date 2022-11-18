@@ -21,40 +21,38 @@ func init() {
 	v := viper.New()
 
 	c := &cobra.Command{
-		Use:   "serviceServiceSnapshotNew",
-		Short: "Retrieve snapshots from services and store in a local folder.",
+		Use:   "servicesnapshottake",
+		Short: "Trigger a remote service to take a snapshot.",
 		Long:  ``,
 		Run: func(cmd *cobra.Command, args []string) {
-			CMDServiceSnapshotNew(v)
+			CMDServiceSnapshotTake(v)
 		},
 	}
 
 	// flag configuration
-	CMDKubeConfig(c, v)
-	CMDSnapshotArchiveDir(c, v)
-
-	// services
-	c.PersistentFlags().StringP(FLAG_SERVICE, "s", "", "a <host>:<port> that responds to requests at '<host>:<port>/<version>/backup' by placing backup files in /var/data/single/<host>-<port>-server-0/backup/<timestamp>.bak")
-	v.BindPFlag(FLAG_SERVICE, c.PersistentFlags().Lookup(FLAG_SERVICE))
+	FlagsAddKubeFlags(c, v)
+	FlagsAddServiceFlag(c, v)
+	FlagsAddProtocolFlag(c, v)
+	FlagsAddAPIVersionFlag(c, v)
 
 	MAIN.AddCommand(c)
 }
 
 const requestFormat = ` { "UUID": "%s", "Fn": "/%s/Backup", "Body": {} }`
 
-func CMDServiceSnapshotNew(v *viper.Viper) {
+func CMDServiceSnapshotTake(v *viper.Viper) {
 	start := time.Now()
-	core.Log.Warnf("ServiceSnapshotNew: starting")
+	core.Log.Warnf("CMDServiceSnapshotTake: starting")
 
 	// for each service
 	serviceSpecs := v.GetStringSlice(FLAG_SERVICE)
-	ServiceSnapshotNew(v, serviceSpecs)
+	ServiceSnapshotTake(v, serviceSpecs)
 
 	duration := time.Since(start)
-	core.Log.Warnf("ServiceSnapshotNew: took %s", duration.String())
+	core.Log.Warnf("CMDServiceSnapshotTake: took %s", duration.String())
 }
 
-func ServiceSnapshotNew(v *viper.Viper, serviceSpecs []string) {
+func ServiceSnapshotTake(v *viper.Viper, serviceSpecs []string) {
 	if len(serviceSpecs) == 0 {
 		core.Log.Fatalf("No services specified.")
 	}
@@ -62,13 +60,14 @@ func ServiceSnapshotNew(v *viper.Viper, serviceSpecs []string) {
 	// get http protocol and backup protocol version
 	protocol := v.GetString(FLAG_PROTOCOL)
 	core.Log.Infof("got protocol: %s", protocol)
+
 	version := v.GetString(FLAG_VERSION)
 	core.Log.Infof("got version: %s", version)
 
 	// parse service specs
 	hostServices, podServices, err := parseServiceSpecs(serviceSpecs)
 	if err != nil {
-		core.Log.Fatalf("ServiceSnapshotNew: %v", err)
+		core.Log.Fatalf("CMDServiceSnapshotTake: %v", err)
 	}
 
 	// subroutine to do an http request
@@ -86,7 +85,7 @@ func ServiceSnapshotNew(v *viper.Viper, serviceSpecs []string) {
 		if err != nil {
 			core.Log.Error(err)
 		}
-		core.Log.Warnf("ServiceSnapshotNew: %s: %d %s", serviceName, resp.StatusCode, resBody)
+		core.Log.Warnf("CMDServiceSnapshotTake: %s: %d %s", serviceName, resp.StatusCode, resBody)
 		if err != nil {
 			core.Log.Error(err)
 		}

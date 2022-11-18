@@ -14,32 +14,32 @@ func init() {
 
 	// CLI Command with flag parsing
 	c := &cobra.Command{
-		Use:   "clustersnapshotnew",
+		Use:   "clustersnapshottake",
 		Short: "Backup cluster services using http backup reqeusts",
-		Long:  `This command is a shortcut for backupremote.`,
+		Long:  `This command is a shortcut for servicesnapshottake with preconfigured services.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			CMDClusterSnapshotNew(v)
+			CMDClusterSnapshotTake(v)
 		},
 	}
 
 	// kube
-	CMDKubeConfig(c, v)
-	CMDProtocolConfig(c, v)
-	CMDVersionConfig(c, v)
+	FlagsAddKubeFlags(c, v)
+	FlagsAddProtocolFlag(c, v)
+	FlagsAddAPIVersionFlag(c, v)
 
 	MAIN.AddCommand(c)
 }
 
-func CMDClusterSnapshotNew(v *viper.Viper) {
+func CMDClusterSnapshotTake(v *viper.Viper) {
 	start := time.Now()
-	core.Log.Warnf("ClusterBackup: starting")
+	core.Log.Warnf("CMDClusterSnapshotTake: starting")
 
 	// for each service
 	serviceSpecs := []string{
 		"kube|fg/dockie-0:10000",
 	}
-	ServiceSnapshotNew(v, serviceSpecs)
+	ServiceSnapshotTake(v, serviceSpecs)
 
 	duration := time.Since(start)
-	core.Log.Warnf("ClusterBackup: took %s", duration.String())
+	core.Log.Warnf("CMDClusterSnapshotTake: took %s", duration.String())
 }
