@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jkassis/jerrie/core"
 	"github.com/jkassis/jerriedr/cmd/kube"
+	"github.com/jkassis/jerriedr/cmd/schema"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -25,13 +26,13 @@ func init() {
 		Short: "Trigger a remote service to take a snapshot.",
 		Long:  ``,
 		Run: func(cmd *cobra.Command, args []string) {
-			CMDServiceSnapshotTake(v)
+			CMDSnapshotTake(v)
 		},
 	}
 
 	// flag configuration
 	FlagsAddKubeFlags(c, v)
-	FlagsAddServiceFlag(c, v)
+	schema.FlagsAddServiceFlag(c, v)
 	FlagsAddProtocolFlag(c, v)
 	FlagsAddAPIVersionFlag(c, v)
 
@@ -40,19 +41,19 @@ func init() {
 
 const requestFormat = ` { "UUID": "%s", "Fn": "/%s/Backup", "Body": {} }`
 
-func CMDServiceSnapshotTake(v *viper.Viper) {
+func CMDSnapshotTake(v *viper.Viper) {
 	start := time.Now()
-	core.Log.Warnf("CMDServiceSnapshotTake: starting")
+	core.Log.Warnf("CMDSnapshotTake: starting")
 
 	// for each service
-	serviceSpecs := v.GetStringSlice(FLAG_SERVICE)
-	ServiceSnapshotTake(v, serviceSpecs)
+	serviceSpecs := v.GetStringSlice(schema.FLAG_SERVICE)
+	SnapshotTake(v, serviceSpecs)
 
 	duration := time.Since(start)
-	core.Log.Warnf("CMDServiceSnapshotTake: took %s", duration.String())
+	core.Log.Warnf("CMDSnapshotTake: took %s", duration.String())
 }
 
-func ServiceSnapshotTake(v *viper.Viper, serviceSpecs []string) {
+func SnapshotTake(v *viper.Viper, serviceSpecs []string) {
 	if len(serviceSpecs) == 0 {
 		core.Log.Fatalf("No services specified.")
 	}
@@ -65,9 +66,9 @@ func ServiceSnapshotTake(v *viper.Viper, serviceSpecs []string) {
 	core.Log.Infof("got version: %s", version)
 
 	// parse service specs
-	hostServices, podServices, err := parseServiceSpecs(serviceSpecs)
+	hostServices, podServices, err := schema.ParseServiceSpecs(serviceSpecs)
 	if err != nil {
-		core.Log.Fatalf("CMDServiceSnapshotTake: %v", err)
+		core.Log.Fatalf("CMDSnapshotTake: %v", err)
 	}
 
 	// subroutine to do an http request
@@ -85,7 +86,7 @@ func ServiceSnapshotTake(v *viper.Viper, serviceSpecs []string) {
 		if err != nil {
 			core.Log.Error(err)
 		}
-		core.Log.Warnf("CMDServiceSnapshotTake: %s: %d %s", serviceName, resp.StatusCode, resBody)
+		core.Log.Warnf("CMDSnapshotTake: %s: %d %s", serviceName, resp.StatusCode, resBody)
 		if err != nil {
 			core.Log.Error(err)
 		}
@@ -100,7 +101,7 @@ func ServiceSnapshotTake(v *viper.Viper, serviceSpecs []string) {
 	// start backups on podServices
 	for _, service := range podServices {
 		wg.Add(1)
-		go func(service *PodService) {
+		go func(service *schema.PodService) {
 			defer wg.Done()
 
 			// yes. make sure we have a kube client
@@ -135,7 +136,7 @@ func ServiceSnapshotTake(v *viper.Viper, serviceSpecs []string) {
 	// start backups on hostServices
 	for _, service := range hostServices {
 		wg.Add(1)
-		go func(service *HostService) {
+		go func(service *schema.HostService) {
 			defer wg.Done()
 			serviceName := service.Host + ":" + strconv.Itoa(service.Port)
 			core.Log.Warnf("Running remote backup for %s", serviceName)

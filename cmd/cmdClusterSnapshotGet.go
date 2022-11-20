@@ -4,9 +4,9 @@ import (
 	"time"
 
 	"github.com/jkassis/jerrie/core"
+	"github.com/jkassis/jerriedr/cmd/schema"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"golang.org/x/sync/errgroup"
 )
 
 func init() {
@@ -31,28 +31,56 @@ func init() {
 }
 
 func CMDClusterSnapshotGet(v *viper.Viper) {
-	start := time.Now()
-	core.Log.Warnf("CMDClusterSnapshotGet: starting")
+	// dstArchiveSpec := "local|/var/cluster"
 
-	srcArchiveSpecs := []string{
-		"pod|fg/dockie-0|/var/data/single/dockie-0-server-0",
-		"pod|fg/ledgie-0|/var/data/single/ledgie-0-server-0",
-	}
-	dstArchiveSpec := "local|/var/cluster"
-
-	errGroup := errgroup.Group{}
-	for _, srcArchiveSpec := range srcArchiveSpecs {
-		srcArchiveSpec := srcArchiveSpec
-		errGroup.Go(func() error {
-			return ServiceSnapshotCopy(v, srcArchiveSpec, dstArchiveSpec)
-		})
+	// setup the srcArchiveSet
+	srcArchiveSet := schema.ArchiveSetNew()
+	for _, srcArchiveSpec := range []string{
+		"statefulset|fg/dockie|/var/data/single/<pod>-server-0/backup",
+		"statefulset|fg/ledgie|/var/data/single/<pod>-server-0/backup",
+		"statefulset|fg/tickie|/var/data/single/<pod>-server-0/backup",
+		"statefulset|fg/dubbie|/var/data/single/<pod>-server-0/backup",
+		"statefulset|fg/keevie|/var/data/single/<pod>-server-0/backup",
+		"statefulset|fg/permie|/var/data/single/<pod>-server-0/backup",
+	} {
+		srcArchiveSet.ArchiveAdd(srcArchiveSpec)
 	}
 
-	err := errGroup.Wait()
+	// get a kube client
+	kubeClient, kubeErr := KubeClientGet(v)
+	if kubeErr != nil {
+		core.Log.Fatalf("kube client initialization failed: %v", kubeErr)
+	}
+
+	// fetch all the files
+	err := srcArchiveSet.FilesFetch(kubeClient)
 	if err != nil {
-		core.Log.Error(err)
+		core.Log.Fatalf("failed to get files for cluster archive set: %v", err)
 	}
 
-	duration := time.Since(start)
-	core.Log.Warnf("CMDClusterSnapshotGet: took %s", duration.String())
+	// seek to now
+	srcArchiveSet.SeekTo(time.Now())
+
+	sss := srcArchiveSet.SnapshotSetGetNext()
+	core.Log.Warn(sss.String())
+
+	// {
+	// 	core.Log.Warnf("CMDClusterSnapshotGet: starting")
+	// 	start := time.Now()
+	// 	errGroup := errgroup.Group{}
+	// 	for _, srcArchiveSpec := range srcArchiveSpecs {
+	// 		srcArchiveSpec := srcArchiveSpec
+	// 		errGroup.Go(func() error {
+	// 			return SnapshotCopy(v, srcArchiveSpec, dstArchiveSpec)
+	// 		})
+	// 	}
+
+	// 	err := errGroup.Wait()
+	// 	if err != nil {
+	// 		core.Log.Error(err)
+	// 	}
+
+	// 	duration := time.Since(start)
+	// 	core.Log.Warnf("CMDClusterSnapshotGet: took %s", duration.String())
+	// }
 }

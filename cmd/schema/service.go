@@ -1,4 +1,4 @@
-package main
+package schema
 
 import (
 	"fmt"
@@ -94,7 +94,7 @@ func (s ServiceSpec) PortGet() (int, error) {
 	return port, nil
 }
 
-func parseServiceSpecs(serviceSpecs []string) ([]*HostService, []*PodService, error) {
+func ParseServiceSpecs(serviceSpecs []string) ([]*HostService, []*PodService, error) {
 	// get services
 	podServices := make([]*PodService, 0)
 	hostServices := make([]*HostService, 0)

@@ -37,8 +37,9 @@ func CMDClusterSnapshotTake(v *viper.Viper) {
 	// for each service
 	serviceSpecs := []string{
 		"kube|fg/dockie-0:10000",
+		"kube|fg/tickie-0:10000",
 	}
-	ServiceSnapshotTake(v, serviceSpecs)
+	SnapshotTake(v, serviceSpecs)
 
 	duration := time.Since(start)
 	core.Log.Warnf("CMDClusterSnapshotTake: took %s", duration.String())
