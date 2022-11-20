@@ -32,14 +32,13 @@ func init() {
 
 func CMDClusterSnapshotGet(v *viper.Viper) {
 	start := time.Now()
-	core.Log.Warnf("ClusterSnapshotGet: starting")
+	core.Log.Warnf("CMDClusterSnapshotGet: starting")
 
 	srcArchiveSpecs := []string{
 		"pod|fg/dockie-0|/var/data/single/dockie-0-server-0",
 		"pod|fg/ledgie-0|/var/data/single/ledgie-0-server-0",
 	}
-
-	dstArchiveSpec := "host|localhost|/var/cluster"
+	dstArchiveSpec := "local|/var/cluster"
 
 	errGroup := errgroup.Group{}
 	for _, srcArchiveSpec := range srcArchiveSpecs {
@@ -55,5 +54,5 @@ func CMDClusterSnapshotGet(v *viper.Viper) {
 	}
 
 	duration := time.Since(start)
-	core.Log.Warnf("ClusterSnapshotGet: took %s", duration.String())
+	core.Log.Warnf("CMDClusterSnapshotGet: took %s", duration.String())
 }

@@ -13,7 +13,7 @@
       "cwd": "${workspaceFolder}",
       // "args": ["raftIndexGet", "--dbDir=/var/multi/single/local-server-0/data/"],
       // "args": ["serve"],
-      "args": ["clustersnapshotget", "-c", "/Users/jkassis/.kube/config"],
+      "args": ["clustersnapshotget", "--kc", "/Users/jkassis/.kube/config"],
       // "args": ["clustersnapshotnew", "-c", "/Users/jkassis/.kube/config"],
       // "args": ["backupremote", "-d", "/var/multi/single/local-server-0/data"],
       // "args": ["backuplocal", "-d", "/var/multi/single/local-server-0/data"],

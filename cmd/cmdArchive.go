@@ -3,17 +3,9 @@ package main
 import (
 	"fmt"
 	"strings"
-
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 const FLAG_ARCHIVE = "archive"
-
-func CMDArchiveConfig(c *cobra.Command, v *viper.Viper) {
-	c.PersistentFlags().StringP(FLAG_ARCHIVE, "s", "", "a <host> that responds to requests at '<host>/<version>/backup' by placing backup files in /var/data/single/<pod>-<port>-server-0/backup/<timestamp>.bak")
-	v.BindPFlag(FLAG_ARCHIVE, c.PersistentFlags().Lookup(FLAG_ARCHIVE))
-}
 
 type Archive struct {
 	Scheme       string
@@ -25,14 +17,14 @@ type Archive struct {
 	PodContainer string
 }
 
-func (s Archive) Parse(in string) error {
+func (s *Archive) Parse(in string) error {
 	parts := strings.Split(in, "|")
-	if len(parts) < 3 {
-		return fmt.Errorf("<archiveSpec> equires 3 parts separated by |")
-	}
-
 	s.Scheme = parts[0]
 	if s.Scheme == "pod" {
+		if len(parts) != 3 {
+			return fmt.Errorf("%s must have 3 parts separated by |", in)
+		}
+
 		host := parts[1]
 		if !strings.Contains(host, "/") {
 			return fmt.Errorf("must have <namespace>/<pod>")
@@ -54,6 +46,9 @@ func (s Archive) Parse(in string) error {
 			return fmt.Errorf("must have <path>")
 		}
 	} else if s.Scheme == "host" {
+		if len(parts) != 3 {
+			return fmt.Errorf("%s must have 3 parts separated by |", in)
+		}
 		s.Host = parts[1]
 		if s.Host == "" {
 			return fmt.Errorf("must have <host>")
@@ -64,7 +59,10 @@ func (s Archive) Parse(in string) error {
 			return fmt.Errorf("must have <path>")
 		}
 	} else if s.Scheme == "local" {
-		s.Path = parts[2]
+		if len(parts) != 2 {
+			return fmt.Errorf("%s must have 2 parts separated by |", in)
+		}
+		s.Path = parts[1]
 		if s.Path == "" {
 			return fmt.Errorf("must have <path>")
 		}
@@ -74,14 +72,14 @@ func (s Archive) Parse(in string) error {
 	return nil
 }
 
-func (s Archive) IsKube() bool {
-	return s.Host != ""
+func (s *Archive) IsPod() bool {
+	return s.Scheme == "pod"
 }
 
-func (s Archive) IsHost() bool {
-	return s.PodName != ""
+func (s *Archive) IsHost() bool {
+	return s.Scheme == "host"
 }
 
-func (s Archive) IsLocal() bool {
-	return s.Host != ""
+func (s *Archive) IsLocal() bool {
+	return s.Scheme == "local"
 }

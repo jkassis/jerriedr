@@ -69,7 +69,7 @@ func ServiceSnapshotCopy(v *viper.Viper, srcArchiveSpec, dstArchiveSpec string) 
 		core.Log.Fatalf("ServiceSnapshotCopy: %v", err)
 	}
 
-	if srcArchive.IsKube() {
+	if srcArchive.IsPod() {
 		// yes. make sure we have a kube client
 		if kubeErr != nil {
 			core.Log.Fatalf("kube client initialization failed: %v", kubeErr)
@@ -109,12 +109,12 @@ func ServiceSnapshotCopy(v *viper.Viper, srcArchiveSpec, dstArchiveSpec string) 
 
 	// write from the pipe to the dst
 	dstArchive := &Archive{}
-	err = srcArchive.Parse(srcArchiveSpec)
+	err = dstArchive.Parse(dstArchiveSpec)
 	if err != nil {
 		core.Log.Fatalf("ServiceSnapshotCopy: %v", err)
 	}
 
-	if dstArchive.IsKube() {
+	if dstArchive.IsPod() {
 		// yes. make sure we have a kube client
 		if kubeErr != nil {
 			core.Log.Fatalf("kube client initialization failed: %v", kubeErr)

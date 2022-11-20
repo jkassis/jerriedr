@@ -12,7 +12,7 @@ import (
 const FLAG_SERVICE = "service"
 
 func FlagsAddServiceFlag(c *cobra.Command, v *viper.Viper) {
-	c.PersistentFlags().StringP(FLAG_SERVICE, "sr", "", "a <host>:<port> that responds to requests at '<host>:<port>/<version>/backup' by placing backup files in /var/data/single/<host>-<port>-server-0/backup/<timestamp>.bak")
+	c.PersistentFlags().String(FLAG_SERVICE, "", "a <host>:<port> that responds to requests at '<host>:<port>/<version>/backup' by placing backup files in /var/data/single/<host>-<port>-server-0/backup/<timestamp>.bak")
 	c.MarkPersistentFlagRequired(FLAG_SERVICE)
 	v.BindPFlag(FLAG_SERVICE, c.PersistentFlags().Lookup(FLAG_SERVICE))
 }

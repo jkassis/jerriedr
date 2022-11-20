@@ -31,64 +31,64 @@ func main() {
 }
 
 const (
-	FLAG_KUBE_MASTER_URL  = "kubeMasterURL"
-	FLAG_KUBE_CONFIG_PATH = "kubeConfigPath"
-	FLAG_DB_DIR           = "dbDir"
-	FLAG_HOSTPORT         = "serverHostport"
-	FLAG_PROTOCOL         = "protocol"
-	FLAG_VERSION          = "version"
-	FLAG_SRC_ARCHIVE      = "srcArchive"
-	FLAG_DST_ARCHIVE      = "dstArchive"
-	FLAG_RESTORE_ARCHIVE  = "restoreArchive"
+	FLAG_KUBE_MASTER_URL  = "ku"
+	FLAG_KUBE_CONFIG_PATH = "kc"
+	FLAG_DB_DIR           = "db"
+	FLAG_HOSTPORT         = "hp"
+	FLAG_PROTOCOL         = "pr"
+	FLAG_VERSION          = "vr"
+	FLAG_SRC_ARCHIVE      = "sa"
+	FLAG_DST_ARCHIVE      = "da"
+	FLAG_RESTORE_ARCHIVE  = "ra"
 )
 
 func FlagsAddDBFlags(c *cobra.Command, v *viper.Viper) {
-	c.PersistentFlags().StringP(FLAG_DB_DIR, "d", "", "database dir")
+	c.PersistentFlags().String(FLAG_DB_DIR, "", "database dir")
 	c.MarkPersistentFlagRequired(FLAG_DB_DIR)
 	v.BindPFlag(FLAG_DB_DIR, c.PersistentFlags().Lookup(FLAG_DB_DIR))
 }
 
 func FlagsAddKubeFlags(c *cobra.Command, v *viper.Viper) {
-	c.PersistentFlags().StringP(FLAG_KUBE_CONFIG_PATH, "c", "", "absolute path to the kubernetes config file")
+	c.PersistentFlags().String(FLAG_KUBE_CONFIG_PATH, "", "absolute path to the kubernetes config file")
 	// c.MarkPersistentFlagRequired(FLAG_KUBE)
 	v.BindPFlag(FLAG_KUBE_CONFIG_PATH, c.PersistentFlags().Lookup(FLAG_KUBE_CONFIG_PATH))
 
-	c.PersistentFlags().StringP(FLAG_KUBE_MASTER_URL, "m", "https://api.live.shinetribe.media:6443", "URL to the kubernetes master")
+	c.PersistentFlags().String(FLAG_KUBE_MASTER_URL, "https://api.live.shinetribe.media:6443", "URL to the kubernetes master")
 	// c.MarkPersistentFlagRequired(FLAG_KUBE)
 	v.BindPFlag(FLAG_KUBE_MASTER_URL, c.PersistentFlags().Lookup(FLAG_KUBE_MASTER_URL))
 }
 
 func FlagsAddHostFlags(c *cobra.Command, v *viper.Viper) {
-	c.PersistentFlags().StringP(FLAG_HOSTPORT, "u", "localhost:10000", "server hostport")
+	c.PersistentFlags().String(FLAG_HOSTPORT, "localhost:10000", "server hostport")
 	// c.MarkPersistentFlagRequired(FLAG_SERVER_HOSTPORT)
 	v.BindPFlag(FLAG_HOSTPORT, c.PersistentFlags().Lookup(FLAG_HOSTPORT))
 }
 
 func FlagsAddProtocolFlag(c *cobra.Command, v *viper.Viper) {
-	c.PersistentFlags().StringP(FLAG_PROTOCOL, "p", "http", "protocol: http | https")
+	c.PersistentFlags().String(FLAG_PROTOCOL, "http", "protocol: http | https")
 	// c.MarkPersistentFlagRequired(FLAG_PROTOCOL)
 	v.BindPFlag(FLAG_PROTOCOL, c.PersistentFlags().Lookup(FLAG_PROTOCOL))
 }
 
 func FlagsAddAPIVersionFlag(c *cobra.Command, v *viper.Viper) {
-	c.PersistentFlags().StringP(FLAG_VERSION, "v", "v1", "backup protocol version")
+	c.PersistentFlags().String(FLAG_VERSION, "v1", "backup protocol version")
 	v.BindPFlag(FLAG_VERSION, c.PersistentFlags().Lookup(FLAG_VERSION))
 }
 
 func FlagsAddSrcArchiveFlag(c *cobra.Command, v *viper.Viper) {
-	c.PersistentFlags().StringP(FLAG_SRC_ARCHIVE, "sa", "", "source archive")
+	c.PersistentFlags().String(FLAG_SRC_ARCHIVE, "", "source archive")
 	c.MarkPersistentFlagRequired(FLAG_SRC_ARCHIVE)
 	v.BindPFlag(FLAG_SRC_ARCHIVE, c.PersistentFlags().Lookup(FLAG_SRC_ARCHIVE))
 }
 
 func FlagsAddDstArchiveFlag(c *cobra.Command, v *viper.Viper) {
-	c.PersistentFlags().StringP(FLAG_DST_ARCHIVE, "da", "", "destination archive")
+	c.PersistentFlags().String(FLAG_DST_ARCHIVE, "", "destination archive")
 	c.MarkPersistentFlagRequired(FLAG_DST_ARCHIVE)
 	v.BindPFlag(FLAG_DST_ARCHIVE, c.PersistentFlags().Lookup(FLAG_DST_ARCHIVE))
 }
 
 func FlagsAddRestoreArchivesDir(c *cobra.Command, v *viper.Viper) {
-	c.PersistentFlags().StringP(FLAG_RESTORE_ARCHIVE, "ra", "/tmp/jerrie/restore", "restore archive")
+	c.PersistentFlags().String(FLAG_RESTORE_ARCHIVE, "/tmp/jerrie/restore", "restore archive")
 	c.MarkPersistentFlagRequired(FLAG_RESTORE_ARCHIVE)
 	v.BindPFlag(FLAG_RESTORE_ARCHIVE, c.PersistentFlags().Lookup(FLAG_RESTORE_ARCHIVE))
 }
