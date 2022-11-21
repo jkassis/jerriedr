@@ -3,8 +3,10 @@ package main
 import (
 	"time"
 
+	"github.com/gdamore/tcell/v2"
 	"github.com/jkassis/jerrie/core"
 	"github.com/jkassis/jerriedr/cmd/schema"
+	"github.com/rivo/tview"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -61,26 +63,123 @@ func CMDClusterSnapshotGet(v *viper.Viper) {
 	// seek to now
 	srcArchiveSet.SeekTo(time.Now())
 
-	sss := srcArchiveSet.SnapshotSetGetNext()
-	core.Log.Warn(sss.String())
+	app := tview.NewApplication()
 
-	// {
-	// 	core.Log.Warnf("CMDClusterSnapshotGet: starting")
-	// 	start := time.Now()
-	// 	errGroup := errgroup.Group{}
-	// 	for _, srcArchiveSpec := range srcArchiveSpecs {
-	// 		srcArchiveSpec := srcArchiveSpec
-	// 		errGroup.Go(func() error {
-	// 			return SnapshotCopy(v, srcArchiveSpec, dstArchiveSpec)
-	// 		})
-	// 	}
+	// table := tview.NewTable()
+	// table.SetSelectable(true, false)
 
-	// 	err := errGroup.Wait()
-	// 	if err != nil {
-	// 		core.Log.Error(err)
-	// 	}
-
-	// 	duration := time.Since(start)
-	// 	core.Log.Warnf("CMDClusterSnapshotGet: took %s", duration.String())
+	// for i, s := range []string{
+	// 	"Select",
+	// 	"these",
+	// 	"columns",
+	// 	"while",
+	// 	"typing",
+	// 	"in",
+	// 	"the",
+	// 	"InputField",
+	// } {
+	// 	table.SetCellSimple(i, 0, s)
 	// }
+
+	// input := tview.NewInputField()
+	// input.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+	// 	switch event.Key() {
+	// 	case tcell.KeyUp, tcell.KeyDown:
+	// 		table.InputHandler()(event, nil)
+	// 	}
+
+	// 	return event
+	// })
+
+	// Table for snapshots
+	table := tview.NewTable().SetBorders(true)
+	table.SetSelectable(false, true)
+	table.SetBorder(true).SetTitle("Snapshots")
+
+	// set corner cell
+	table.SetCell(0, 0, tview.NewTableCell().SetTextColor(tcell.ColorWhite))
+
+	// render headers
+	for r, archive := range srcArchiveSet.Archives {
+		word := archive.KubeName
+		table.SetCell(r+1, 0,
+			tview.NewTableCell(word).
+				SetTextColor(tcell.ColorWhite).
+				SetAlign(tview.AlignCenter))
+	}
+
+	flex := tview.NewFlex().
+		// AddItem(tview.NewBox().SetBorder(true).SetTitle("Left (1/2 x width of Top)"), 0, 1, false).
+		AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
+			// AddItem(tview.NewBox().SetBorder(true).SetTitle("Top"), 0, 1, false).
+			AddItem(table, 0, 3, true).
+			AddItem(tview.NewBox().SetBorder(true).SetTitle("Help"), 5, 1, false), 0, 2, false).
+		AddItem(tview.NewBox().SetBorder(true).SetTitle("Filters"), 20, 1, false)
+	if err := app.SetRoot(flex, true).Run(); err != nil {
+		panic(err)
+	}
+
+	// // table.Select(0, 0).SetFixed(1, 1).SetDoneFunc(func(key tcell.Key) {
+	// // 	if key == tcell.KeyEscape {
+	// // 		app.Stop()
+	// // 	}
+	// // 	if key == tcell.KeyEnter {
+	// // 		table.SetSelectable(true, true)
+	// // 	}
+	// // })
+
+	// // table.SetSelectedFunc(func(row int, column int) {
+	// // 	table.GetCell(row, column).SetTextColor(tcell.ColorRed)
+	// // 	table.SetSelectable(false, false)
+	// // })
+
+	// // sss := srcArchiveSet.SnapshotSetGetNext()
+
+	// for r := 0; r < rows; r++ {
+	// 	for c := 0; c < cols; c++ {
+	// 		color := tcell.ColorWhite
+	// 		if c < 1 || r < 1 {
+	// 			color = tcell.ColorYellow
+	// 		}
+	// 		table.SetCell(r, c,
+	// 			tview.NewTableCell(lorem[word]).
+	// 				SetTextColor(color).
+	// 				SetAlign(tview.AlignCenter))
+	// 		word = (word + 1) % len(lorem)
+	// 	}
+	// }
+
+	// if err := app.SetRoot(flex, true).SetFocus(table).Run(); err != nil {
+	// 	panic(err)
+	// }
+
+	// // box := tview.NewBox().SetBorder(true).SetTitle("Hello, world!")
+	// // inputField := tview.NewInputField().
+	// // 	SetLabel("Enter a number: ").
+	// // 	SetPlaceholder("E.g. 1234").
+	// // 	SetFieldWidth(10).
+	// // 	SetAcceptanceFunc(tview.InputFieldInteger).
+	// // 	SetDoneFunc(func(key tcell.Key) {
+	// // 		app.Stop()
+	// // 	})
+
+	// // {
+	// // 	core.Log.Warnf("CMDClusterSnapshotGet: starting")
+	// // 	start := time.Now()
+	// // 	errGroup := errgroup.Group{}
+	// // 	for _, srcArchiveSpec := range srcArchiveSpecs {
+	// // 		srcArchiveSpec := srcArchiveSpec
+	// // 		errGroup.Go(func() error {
+	// // 			return SnapshotCopy(v, srcArchiveSpec, dstArchiveSpec)
+	// // 		})
+	// // 	}
+
+	// // 	err := errGroup.Wait()
+	// // 	if err != nil {
+	// // 		core.Log.Error(err)
+	// // 	}
+
+	// // 	duration := time.Since(start)
+	// // 	core.Log.Warnf("CMDClusterSnapshotGet: took %s", duration.String())
+	// // }
 }

@@ -10,6 +10,7 @@
       "request": "launch",
       "mode": "debug",
       "program": "${workspaceFolder}/cmd",
+      "console": "integratedTerminal",
       "cwd": "${workspaceFolder}",
       // "args": ["raftIndexGet", "--dbDir=/var/multi/single/local-server-0/data/"],
       // "args": ["serve"],
@@ -19,7 +20,7 @@
       // "args": ["backuplocal", "-d", "/var/multi/single/local-server-0/data"],
       // "args": ["raftIndexSet", "--dbDir=/var/multi/single/local-server-0/data/", "--index=62"],
       "env": {
-        "LOG_LEVEL": "debug"
+        "LOG_LEVEL": "warn"
       }
     }
   ]

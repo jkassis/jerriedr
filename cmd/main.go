@@ -23,6 +23,7 @@ var MAIN = &cobra.Command{
 }
 
 func main() {
+
 	err := MAIN.Execute()
 	if err != nil {
 		fmt.Println(err)
