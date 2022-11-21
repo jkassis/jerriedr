@@ -60,6 +60,9 @@ func (as *ArchiveSet) SnapshotSetGetNext() *SnapshotSet {
 			sss.ArchiveFileAdd(archiveFile)
 		}
 	}
+	if len(sss.ArchiveFiles) == 0 {
+		return nil
+	}
 	sss.SortByMostRecent()
 	sss.EvaluateStatus()
 	as.sss = sss

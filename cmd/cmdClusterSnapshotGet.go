@@ -97,15 +97,30 @@ func CMDClusterSnapshotGet(v *viper.Viper) {
 	table.SetBorder(true).SetTitle("Snapshots")
 
 	// set corner cell
-	table.SetCell(0, 0, tview.NewTableCell().SetTextColor(tcell.ColorWhite))
+	table.SetCell(0, 0, tview.NewTableCell("").SetTextColor(tcell.ColorWhite))
 
-	// render headers
+	// render left column headers
 	for r, archive := range srcArchiveSet.Archives {
 		word := archive.KubeName
 		table.SetCell(r+1, 0,
 			tview.NewTableCell(word).
 				SetTextColor(tcell.ColorWhite).
 				SetAlign(tview.AlignCenter))
+	}
+
+	// fill in remaining columns
+	srcArchiveSet.SeekTo(time.Now())
+	for c := 1; true; c++ {
+		archiveSet := srcArchiveSet.SnapshotSetGetNext()
+		if archiveSet == nil {
+			break
+		}
+		for r, archiveFile := range archiveSet.ArchiveFiles {
+			table.SetCell(r+1, c,
+				tview.NewTableCell(archiveFile.Name+" "+archiveFile.Archive.KubeName).
+					SetTextColor(tcell.ColorWhite).
+					SetAlign(tview.AlignCenter))
+		}
 	}
 
 	flex := tview.NewFlex().
