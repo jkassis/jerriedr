@@ -24,23 +24,24 @@ func ArchiveNew() *Archive {
 }
 
 type Archive struct {
-	Filters       []*TimeFilter
-	Scheme        string
-	Path          string
-	Host          string
-	Spec          string
-	KubeName      string
-	KubeNamespace string
-	KubeContainer string
 	Files         []*ArchiveFile
 	FilesFiltered []*ArchiveFile
+	Filters       []*TimeFilter
+	Host          string
+	KubeContainer string
+	KubeName      string
+	KubeNamespace string
+	Path          string
+	Parent        *Archive
+	Scheme        string
+	Spec          string
 }
 
-func (a *Archive) Parse(in string) error {
-	parts := strings.Split(in, "|")
+func (a *Archive) Parse(spec string) error {
+	parts := strings.Split(spec, "|")
 	a.Scheme = parts[0]
 	if a.Scheme == "statefulset" {
-		err := fmt.Errorf("%s must be statefulset|<kubeNamespace>/<kubeName>|<pathPattern> where <pathPattern> can contain '<pod>' to insert the pod Name", in)
+		err := fmt.Errorf("%s must be statefulset|<kubeNamespace>/<kubeName>|<pathPattern> where <pathPattern> can contain '<pod>' to insert the pod Name", spec)
 
 		if len(parts) != 3 {
 			return err
@@ -67,7 +68,7 @@ func (a *Archive) Parse(in string) error {
 			return err
 		}
 	} else if a.Scheme == "pod" {
-		err := fmt.Errorf("%s must be pod|<kubeNamespace>/<kubeName>|<path>", in)
+		err := fmt.Errorf("%s must be pod|<kubeNamespace>/<kubeName>|<path>", spec)
 
 		if len(parts) != 3 {
 			return err
@@ -94,7 +95,7 @@ func (a *Archive) Parse(in string) error {
 			return err
 		}
 	} else if a.Scheme == "host" {
-		err := fmt.Errorf("%s must be host|<hostName>|<path>", in)
+		err := fmt.Errorf("%s must be host|<hostName>|<path>", spec)
 
 		if len(parts) != 3 {
 			return err
@@ -109,7 +110,7 @@ func (a *Archive) Parse(in string) error {
 			return err
 		}
 	} else if a.Scheme == "local" {
-		err := fmt.Errorf("%s must be local|<path>", in)
+		err := fmt.Errorf("%s must be local|<path>", spec)
 
 		if len(parts) != 2 {
 			return err
@@ -119,8 +120,9 @@ func (a *Archive) Parse(in string) error {
 			return err
 		}
 	} else {
-		return fmt.Errorf("%s must be <scheme>|<schemeSpec> where <scheme> => statefulset | pod | host | local: %s", in, a.Scheme)
+		return fmt.Errorf("%s must be <scheme>|<schemeSpec> where <scheme> => statefulset | pod | host | local: %s", spec, a.Scheme)
 	}
+	a.Spec = spec
 	return nil
 }
 
@@ -147,14 +149,15 @@ func (a *Archive) PodArchiveGet(replica int) (*Archive, error) {
 	podName := a.KubeName + "-" + strconv.Itoa(replica)
 	podPath := strings.ReplaceAll(a.Path, "<pod>", podName)
 	return &Archive{
-		Scheme:        "pod",
-		Path:          podPath,
+		Files:         make([]*ArchiveFile, 0),
 		Host:          "",
-		Spec:          fmt.Sprintf("pod|%s/%s|%s", a.KubeNamespace, podName, podPath),
+		KubeContainer: a.KubeContainer,
 		KubeName:      podName,
 		KubeNamespace: a.KubeNamespace,
-		KubeContainer: a.KubeContainer,
-		Files:         make([]*ArchiveFile, 0),
+		Path:          podPath,
+		Parent:        a,
+		Scheme:        "pod",
+		Spec:          fmt.Sprintf("pod|%s/%s|%s", a.KubeNamespace, podName, podPath),
 	}, nil
 }
 
@@ -276,4 +279,20 @@ func (ss *Archive) FileGetFilteredBefore(t time.Time) *ArchiveFile {
 	}
 
 	return nil
+}
+
+type BySpec []*Archive
+
+func (afs BySpec) Len() int {
+	return len(afs)
+}
+
+func (afs BySpec) Less(i, j int) bool {
+	return afs[i].Spec < afs[j].Spec
+}
+
+func (afs BySpec) Swap(i, j int) {
+	t := afs[i]
+	afs[i] = afs[j]
+	afs[j] = t
 }

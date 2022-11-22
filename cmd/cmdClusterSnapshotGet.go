@@ -1,12 +1,8 @@
 package main
 
 import (
-	"time"
-
-	"github.com/gdamore/tcell/v2"
 	"github.com/jkassis/jerrie/core"
 	"github.com/jkassis/jerriedr/cmd/schema"
-	"github.com/rivo/tview"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -60,10 +56,9 @@ func CMDClusterSnapshotGet(v *viper.Viper) {
 		core.Log.Fatalf("failed to get files for cluster archive set: %v", err)
 	}
 
-	// seek to now
-	srcArchiveSet.SeekTo(time.Now())
-
-	app := tview.NewApplication()
+	picker := ArchiveFileSetPickerNew()
+	picker.ArchiveSetPut(srcArchiveSet)
+	picker.Run()
 
 	// table := tview.NewTable()
 	// table.SetSelectable(true, false)
@@ -92,47 +87,6 @@ func CMDClusterSnapshotGet(v *viper.Viper) {
 	// })
 
 	// Table for snapshots
-	table := tview.NewTable().SetBorders(true)
-	table.SetSelectable(false, true)
-	table.SetBorder(true).SetTitle("Snapshots")
-
-	// set corner cell
-	table.SetCell(0, 0, tview.NewTableCell("").SetTextColor(tcell.ColorWhite))
-
-	// render left column headers
-	for r, archive := range srcArchiveSet.Archives {
-		word := archive.KubeName
-		table.SetCell(r+1, 0,
-			tview.NewTableCell(word).
-				SetTextColor(tcell.ColorWhite).
-				SetAlign(tview.AlignCenter))
-	}
-
-	// fill in remaining columns
-	srcArchiveSet.SeekTo(time.Now())
-	for c := 1; true; c++ {
-		archiveSet := srcArchiveSet.SnapshotSetGetNext()
-		if archiveSet == nil {
-			break
-		}
-		for r, archiveFile := range archiveSet.ArchiveFiles {
-			table.SetCell(r+1, c,
-				tview.NewTableCell(archiveFile.Name+" "+archiveFile.Archive.KubeName).
-					SetTextColor(tcell.ColorWhite).
-					SetAlign(tview.AlignCenter))
-		}
-	}
-
-	flex := tview.NewFlex().
-		// AddItem(tview.NewBox().SetBorder(true).SetTitle("Left (1/2 x width of Top)"), 0, 1, false).
-		AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
-			// AddItem(tview.NewBox().SetBorder(true).SetTitle("Top"), 0, 1, false).
-			AddItem(table, 0, 3, true).
-			AddItem(tview.NewBox().SetBorder(true).SetTitle("Help"), 5, 1, false), 0, 2, false).
-		AddItem(tview.NewBox().SetBorder(true).SetTitle("Filters"), 20, 1, false)
-	if err := app.SetRoot(flex, true).Run(); err != nil {
-		panic(err)
-	}
 
 	// // table.Select(0, 0).SetFixed(1, 1).SetDoneFunc(func(key tcell.Key) {
 	// // 	if key == tcell.KeyEscape {

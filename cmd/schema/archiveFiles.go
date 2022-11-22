@@ -2,17 +2,32 @@ package schema
 
 type ByMostRecent []*ArchiveFile
 
-func (afbt ByMostRecent) Len() int {
-	return len(afbt)
+func (afs ByMostRecent) Len() int {
+	return len(afs)
 }
 
-func (afbt ByMostRecent) Less(i, j int) bool {
-	return afbt[i].Time.After(afbt[j].Time)
+func (afs ByMostRecent) Less(i, j int) bool {
+	return afs[i].Time.After(afs[j].Time)
 }
 
-// Swap swaps the elements with indexes i and j.
-func (afbt ByMostRecent) Swap(i, j int) {
-	t := afbt[i]
-	afbt[i] = afbt[j]
-	afbt[j] = t
+func (afs ByMostRecent) Swap(i, j int) {
+	t := afs[i]
+	afs[i] = afs[j]
+	afs[j] = t
+}
+
+type ByArchiveSpec []*ArchiveFile
+
+func (afs ByArchiveSpec) Len() int {
+	return len(afs)
+}
+
+func (afs ByArchiveSpec) Less(i, j int) bool {
+	return afs[i].Archive.Spec < afs[j].Archive.Spec
+}
+
+func (afs ByArchiveSpec) Swap(i, j int) {
+	t := afs[i]
+	afs[i] = afs[j]
+	afs[j] = t
 }

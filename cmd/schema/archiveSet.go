@@ -16,7 +16,7 @@ func ArchiveSetNew() *ArchiveSet {
 type ArchiveSet struct {
 	Archives []*Archive
 	seekTime time.Time
-	sss      *SnapshotSet
+	sss      *ArchiveFileSet
 }
 
 func (as *ArchiveSet) ArchiveAdd(archiveSpec string) error {
@@ -47,13 +47,13 @@ func (as *ArchiveSet) SeekTo(t time.Time) {
 	as.sss = nil
 }
 
-func (as *ArchiveSet) SnapshotSetGetNext() *SnapshotSet {
+func (as *ArchiveSet) ArchiveFileSetGetNext() *ArchiveFileSet {
 	if as.sss != nil {
 		as.seekTime = as.sss.NextSeekTime(as.seekTime)
 	}
 
-	// make the next snapshotset
-	sss := SnapshotSetNew()
+	// make the next ArchiveFileSet
+	sss := ArchiveFileSetNew()
 	for _, a := range as.Archives {
 		archiveFile := a.FileGetFilteredBefore(as.seekTime)
 		if archiveFile != nil {
