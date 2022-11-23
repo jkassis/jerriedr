@@ -5,29 +5,21 @@ import (
 	"sort"
 	"time"
 
-	"github.com/fatih/color"
 	"github.com/gdamore/tcell/v2"
 	"github.com/jkassis/jerrie/core"
 	"github.com/jkassis/jerriedr/cmd/schema"
 	"github.com/rivo/tview"
 )
 
-var red, yellow, green func(a ...interface{}) string
-
-func init() {
-	yellow = color.New(color.FgYellow).SprintFunc()
-	red = color.New(color.FgRed).SprintFunc()
-	green = color.New(color.FgGreen).SprintFunc()
-}
-
 type ArchiveFileSetPicker struct {
-	ArchiveSet                 *schema.ArchiveSet
-	App                        *tview.Application
-	SelectedSnapshotFilesView  *tview.Table
-	SelectedSnapshotStatusView *tview.Table
-	FiltersView                *tview.TextView
-	SnapshotsView              *tview.Table
-	RootView                   *tview.Flex
+	ArchiveSet                     *schema.ArchiveSet
+	App                            *tview.Application
+	SelectedSnapshotArchiveFileSet *schema.ArchiveFileSet
+	SelectedSnapshotFilesView      *tview.Table
+	SelectedSnapshotStatusView     *tview.Table
+	FiltersView                    *tview.TextView
+	SnapshotsView                  *tview.Table
+	RootView                       *tview.Flex
 }
 
 func ArchiveFileSetPickerNew() *ArchiveFileSetPicker {
@@ -145,8 +137,8 @@ func (p *ArchiveFileSetPicker) SelectedSnapshotViewRender(row, col int) {
 
 func (p *ArchiveFileSetPicker) Select(row, col int) {
 	selectedCell := p.SnapshotsView.GetCell(row, col)
-	// ref := selectedCell.GetReference()
-	// archiveFileSet := ref.(*schema.ArchiveFileSet)
+	ref := selectedCell.GetReference()
+	p.SelectedSnapshotArchiveFileSet = ref.(*schema.ArchiveFileSet)
 	p.App.Stop()
 	core.Log.Warnf("retrieving snapshot from '%s'", selectedCell.Text)
 }

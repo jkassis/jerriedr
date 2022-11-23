@@ -38,8 +38,9 @@ const (
 	FLAG_HOSTPORT         = "hp"
 	FLAG_PROTOCOL         = "pr"
 	FLAG_VERSION          = "vr"
-	FLAG_SRC_ARCHIVE      = "sa"
-	FLAG_DST_ARCHIVE      = "da"
+	FLAG_SRC              = "sa"
+	FLAG_DST              = "da"
+	FLAG_SERVICE          = "se"
 	FLAG_RESTORE_ARCHIVE  = "ra"
 )
 
@@ -76,16 +77,22 @@ func FlagsAddAPIVersionFlag(c *cobra.Command, v *viper.Viper) {
 	v.BindPFlag(FLAG_VERSION, c.PersistentFlags().Lookup(FLAG_VERSION))
 }
 
-func FlagsAddSrcArchiveFlag(c *cobra.Command, v *viper.Viper) {
-	c.PersistentFlags().String(FLAG_SRC_ARCHIVE, "", "source archive")
-	c.MarkPersistentFlagRequired(FLAG_SRC_ARCHIVE)
-	v.BindPFlag(FLAG_SRC_ARCHIVE, c.PersistentFlags().Lookup(FLAG_SRC_ARCHIVE))
+func FlagsAddSrcFlag(c *cobra.Command, v *viper.Viper) {
+	c.PersistentFlags().String(FLAG_SRC, "", "source")
+	c.MarkPersistentFlagRequired(FLAG_SRC)
+	v.BindPFlag(FLAG_SRC, c.PersistentFlags().Lookup(FLAG_SRC))
 }
 
-func FlagsAddDstArchiveFlag(c *cobra.Command, v *viper.Viper) {
-	c.PersistentFlags().String(FLAG_DST_ARCHIVE, "", "destination archive")
-	c.MarkPersistentFlagRequired(FLAG_DST_ARCHIVE)
-	v.BindPFlag(FLAG_DST_ARCHIVE, c.PersistentFlags().Lookup(FLAG_DST_ARCHIVE))
+func FlagsAddDstFlag(c *cobra.Command, v *viper.Viper) {
+	c.PersistentFlags().String(FLAG_DST, "", "destination")
+	c.MarkPersistentFlagRequired(FLAG_DST)
+	v.BindPFlag(FLAG_DST, c.PersistentFlags().Lookup(FLAG_DST))
+}
+
+func FlagsAddServiceFlag(c *cobra.Command, v *viper.Viper) {
+	c.PersistentFlags().String(FLAG_SERVICE, "", "service")
+	c.MarkPersistentFlagRequired(FLAG_SERVICE)
+	v.BindPFlag(FLAG_SERVICE, c.PersistentFlags().Lookup(FLAG_SERVICE))
 }
 
 func FlagsAddRestoreArchivesDir(c *cobra.Command, v *viper.Viper) {

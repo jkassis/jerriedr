@@ -12,6 +12,16 @@ type ArchiveFile struct {
 	Time    time.Time
 }
 
+func (af *ArchiveFile) Parse(spec string) error {
+	i := strings.LastIndex(spec, "/")
+	if i == -1 {
+		return fmt.Errorf("%s does not look like an ArchiveFileSpec", spec)
+	}
+	af.Name = spec[i+1:]
+	af.Archive = &Archive{}
+	return af.Archive.Parse(spec[:i])
+}
+
 func (af *ArchiveFile) TimestampParseFromName() error {
 	if !strings.HasSuffix(af.Name, ".bak") {
 		return fmt.Errorf("%s does not appear to be a .bak file", af.Name)

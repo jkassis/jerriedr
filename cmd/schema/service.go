@@ -4,136 +4,176 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
-const FLAG_SERVICE = "service"
-
-func FlagsAddServiceFlag(c *cobra.Command, v *viper.Viper) {
-	c.PersistentFlags().String(FLAG_SERVICE, "", "a <host>:<port> that responds to requests at '<host>:<port>/<version>/backup' by placing backup files in /var/data/single/<host>-<port>-server-0/backup/<timestamp>.bak")
-	c.MarkPersistentFlagRequired(FLAG_SERVICE)
-	v.BindPFlag(FLAG_SERVICE, c.PersistentFlags().Lookup(FLAG_SERVICE))
+func ServiceNew() *Service {
+	service := &Service{}
+	return service
 }
 
-type HostService struct {
-	Host string
-	Port int
-	Spec string
+type Service struct {
+	Scheme        string
+	Host          string
+	KubeContainer string
+	KubeName      string
+	KubeNamespace string
+	Port          int
+	Parent        *Service
+	Spec          string
 }
 
-type PodService struct {
-	PodName      string
-	PodNamespace string
-	PodPort      int
-	Spec         string
-}
+func (a *Service) Parse(spec string) error {
+	parts := strings.Split(spec, "|")
+	a.Scheme = parts[0]
 
-// ServiceSpec is a string that represents a service... local or in kube
-// servicespec => <podSpec> | <hostSpec>
-// podSpec => pod|<ns>/<pod>:<port>|<path>
-// hostSpec => host|<hostname>:<port>|<path>
-//
-// Better...
-// podSpec => pod://<ns>/<pod>:<port>/<path>
-// hostSpec => host://<hostname>:<port>/<path>
-type ServiceSpec string
+	if a.Scheme == "statefulset" {
+		err := fmt.Errorf("%s must be statefulset|<kubeNamespace>/<kubeName>(/<container>)?|port", spec)
 
-func (s ServiceSpec) IsKube() bool {
-	return strings.HasPrefix(string(s), "pod|")
-}
+		if len(parts) != 3 {
+			return err
+		}
 
-func (s ServiceSpec) IsHost() bool {
-	return strings.HasPrefix(string(s), "host|")
-}
+		{
+			statefulSet := parts[1]
+			if !strings.Contains(statefulSet, "/") {
+				return err
+			}
 
-func (s ServiceSpec) IsValid() bool {
-	// TODO could get more complex with the validation
-	parts := strings.Split(string(s), "|")
-	if len(parts) < 3 {
-		return false
-	}
+			{
+				statefulSetParts := strings.Split(statefulSet, "/")
+				a.KubeNamespace = statefulSetParts[0]
+				if a.KubeNamespace == "" {
+					return err
+				}
 
-	host := parts[1]
+				a.KubeName = statefulSetParts[1]
+				if a.KubeName == "" {
+					return err
+				}
 
-	if s.IsKube() {
-		return strings.Contains(host, "/") && strings.Contains(host, ":")
+				if len(statefulSetParts) == 3 {
+					a.KubeContainer = statefulSetParts[2]
+				}
+			}
+		}
+
+		{
+			port, converr := strconv.Atoi(parts[2])
+			if converr != nil {
+				return err
+			}
+			a.Port = port
+		}
+	} else if a.Scheme == "pod" {
+		err := fmt.Errorf("%s must be pod|<kubeNamespace>/<kubeName>(/<container>)?|<path>", spec)
+
+		if len(parts) != 3 {
+			return err
+		}
+
+		{
+			pod := parts[1]
+			if !strings.Contains(pod, "/") {
+				return err
+			}
+
+			{
+				podParts := strings.Split(pod, "/")
+				a.KubeNamespace = podParts[0]
+				if a.KubeNamespace == "" {
+					return err
+				}
+
+				a.KubeName = podParts[1]
+				if a.KubeName == "" {
+					return err
+				}
+
+				if len(podParts) == 3 {
+					a.KubeContainer = podParts[2]
+				}
+			}
+		}
+
+		{
+			port, converr := strconv.Atoi(parts[2])
+			if converr != nil {
+				return err
+			}
+			a.Port = port
+		}
+	} else if a.Scheme == "host" {
+		err := fmt.Errorf("%s must be host|<hostName>|<port>", spec)
+
+		if len(parts) != 3 {
+			return err
+		}
+
+		{
+			a.Host = parts[1]
+			if a.Host == "" {
+				return err
+			}
+		}
+
+		{
+			port, converr := strconv.Atoi(parts[2])
+			if converr != nil {
+				return err
+			}
+			a.Port = port
+		}
+	} else if a.Scheme == "local" {
+		err := fmt.Errorf("%s must be local|<port>", spec)
+
+		if len(parts) != 2 {
+			return err
+		}
+
+		{
+			port, converr := strconv.Atoi(parts[2])
+			if converr != nil {
+				return err
+			}
+			a.Port = port
+		}
 	} else {
-		return strings.Contains(host, ":")
-	}
-}
-
-func (s ServiceSpec) HostGet() string {
-	parts := strings.Split(string(s), "|")
-	parts = strings.Split(parts[1], ":")
-	return parts[0]
-}
-
-func (s ServiceSpec) PodGet() string {
-	parts := strings.Split(string(s), "|")
-	parts = strings.Split(parts[1], "/")
-	parts = strings.Split(parts[1], ":")
-	return parts[0]
-}
-
-func (s ServiceSpec) NamespaceGet() string {
-	parts := strings.Split(string(s), "|")
-	parts = strings.Split(parts[1], "/")
-	return parts[0]
-}
-
-func (s ServiceSpec) PortGet() (int, error) {
-	parts := strings.Split(string(s), "|")
-	parts = strings.Split(parts[1], "/")
-	parts = strings.Split(parts[1], ":")
-	port, err := strconv.Atoi(parts[1])
-	if err != nil {
-		return 0, fmt.Errorf("bad port in %s: %v", string(s), err)
-	}
-	return port, nil
-}
-
-func ParseServiceSpecs(serviceSpecs []string) ([]*HostService, []*PodService, error) {
-	// get services
-	podServices := make([]*PodService, 0)
-	hostServices := make([]*HostService, 0)
-	for _, serviceSpecString := range serviceSpecs {
-		// cast and validate
-		serviceSpec := ServiceSpec(serviceSpecString)
-		if !serviceSpec.IsValid() {
-			return nil, nil, fmt.Errorf("invalid service spec: %s", serviceSpec)
-		}
-
-		// is the host address in a kube cluster?
-		if serviceSpec.IsKube() {
-			podPort, err := serviceSpec.PortGet()
-			if err != nil {
-				return nil, nil, fmt.Errorf("could not parse service port: %v", serviceSpec)
-			}
-			podServices = append(podServices,
-				&PodService{
-					PodName:      serviceSpec.PodGet(),
-					PodNamespace: serviceSpec.NamespaceGet(),
-					PodPort:      podPort,
-					Spec:         serviceSpecString,
-				})
-		} else if serviceSpec.IsHost() {
-			// no.
-			port, err := serviceSpec.PortGet()
-			if err != nil {
-				return nil, nil, fmt.Errorf("could not parse service hostport: %v", serviceSpec)
-			}
-			hostServices = append(hostServices,
-				&HostService{
-					Host: serviceSpec.HostGet(),
-					Port: port,
-					Spec: serviceSpecString,
-				})
-		} else {
-			return nil, nil, fmt.Errorf("serviceSpec type must be pod|host: %v", serviceSpec)
-		}
+		return fmt.Errorf("%s must be <scheme>|<schemeSpec> where <scheme> => statefulset | pod | host | local: %s", spec, a.Scheme)
 	}
 
-	return hostServices, podServices, nil
+	a.Spec = spec
+	return nil
+}
+
+func (a *Service) IsPod() bool {
+	return a.Scheme == "pod"
+}
+
+func (a *Service) IsHost() bool {
+	return a.Scheme == "host"
+}
+
+func (a *Service) IsLocal() bool {
+	return a.Scheme == "local"
+}
+
+func (a *Service) IsStatefulSet() bool {
+	return a.Scheme == "statefulset"
+}
+
+func (a *Service) PodServiceGet(replica int) (*Service, error) {
+	if !a.IsStatefulSet() {
+		return nil, fmt.Errorf("%s is not a statefulset spec", a.Spec)
+	}
+	podName := a.KubeName + "-" + strconv.Itoa(replica)
+	return &Service{
+		Host:          "",
+		KubeContainer: a.KubeContainer,
+		KubeName:      podName,
+		KubeNamespace: a.KubeNamespace,
+		Parent:        a,
+		Port:          a.Port,
+		Scheme:        "pod",
+		Spec:          fmt.Sprintf("pod|%s/%s/%s|%d", a.KubeNamespace, podName, a.KubeContainer, a.Port),
+	}, nil
 }

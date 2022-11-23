@@ -153,12 +153,12 @@ func (c *KubeClient) StatefulSetGetByName(namespace string, name string) (*v1.St
 }
 
 // PodGetByName returns a pod
-func (c *KubeClient) PodGetByName(namespace, podName string) (*corev1.Pod, error) {
-	pod, err := c.Clientset.CoreV1().Pods(namespace).Get(context.Background(), podName, metav1.GetOptions{})
+func (c *KubeClient) PodGetByName(namespace, name string) (*corev1.Pod, error) {
+	pod, err := c.Clientset.CoreV1().Pods(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	if k8sErrors.IsNotFound(err) {
 		return nil, fmt.Errorf("pod %s in namespace %s not found", pod, namespace)
 	} else if statusError, isStatus := err.(*k8sErrors.StatusError); isStatus {
-		return nil, fmt.Errorf("error getting pod %s in namespace %s: %v", podName, namespace, statusError.ErrStatus.Message)
+		return nil, fmt.Errorf("error getting pod %s in namespace %s: %v", name, namespace, statusError.ErrStatus.Message)
 	} else if err != nil {
 		return nil, err
 	}
@@ -174,10 +174,10 @@ func (c *KubeClient) PodGetByNamespace(namespace string) (*corev1.PodList, error
 	return pods, nil
 }
 
-// PodGetByDeployment returns all pods for a deployment
-func (c *KubeClient) PodGetByDeployment(namespace, deployment string) (*corev1.PodList, error) {
+// PodGetByDeploymentName returns all pods for a deployment
+func (c *KubeClient) PodGetByDeploymentName(namespace, deploymentName string) (*corev1.PodList, error) {
 	pods, err := c.Clientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{
-		LabelSelector: "deployment=" + deployment,
+		LabelSelector: "deployment=" + deploymentName,
 	})
 	if err != nil {
 		return nil, err
@@ -185,8 +185,8 @@ func (c *KubeClient) PodGetByDeployment(namespace, deployment string) (*corev1.P
 	return pods, nil
 }
 
-// PodGetRandomByDeployment return a random pod in the namespace / deployment
-func (c *KubeClient) PodGetRandomByDeployment(namespace, deploymentName string) (*corev1.Pod, error) {
+// PodGetRandomByDeploymentName return a random pod in the namespace / deployment
+func (c *KubeClient) PodGetRandomByDeploymentName(namespace, deploymentName string) (*corev1.Pod, error) {
 	// Get a deployment to operate on... we might be wrong
 	deployments, err := c.DeploymentGetByNamespace(namespace, deploymentName)
 	if err != nil {
@@ -197,7 +197,7 @@ func (c *KubeClient) PodGetRandomByDeployment(namespace, deploymentName string) 
 
 	// PodList
 	logrus.Info("Getting pods for " + namespace + "/" + firstDeployment + "\n")
-	podList, err := c.PodGetByDeployment(namespace, firstDeployment)
+	podList, err := c.PodGetByDeploymentName(namespace, firstDeployment)
 	if err != nil {
 		return nil, err
 	}
@@ -295,7 +295,7 @@ func (c *KubeClient) ExecSyncAndLog(pod *corev1.Pod, containerName string, comma
 // returns the output from stdout and stderr
 func (c *KubeClient) ExecSyncAndLogOnRandomPod(namespace, deployment, container string, command []string, stdin io.Reader) error {
 	// get a random pod
-	pod, err := c.PodGetRandomByDeployment(namespace, deployment)
+	pod, err := c.PodGetRandomByDeploymentName(namespace, deployment)
 	if err != nil {
 		return err
 	}
@@ -353,10 +353,10 @@ func (c *KubeClient) FileWrite(src io.Reader, dst *FileSpec, pod *corev1.Pod, co
 		return err
 	}
 
-	errs := &errgroup.Group{}
+	eg := &errgroup.Group{}
 
 	// stream to dst
-	errs.Go(func() error {
+	eg.Go(func() error {
 		stdout := bytes.NewBuffer(nil)
 		_, err = io.Copy(stdout, stdoutReader)
 		if err != nil {
@@ -370,7 +370,7 @@ func (c *KubeClient) FileWrite(src io.Reader, dst *FileSpec, pod *corev1.Pod, co
 	})
 
 	// stream to err
-	errs.Go(func() error {
+	eg.Go(func() error {
 		stderr := bytes.NewBuffer(nil)
 		_, err = io.Copy(stderr, stderrReader)
 		if err != nil {
@@ -382,7 +382,7 @@ func (c *KubeClient) FileWrite(src io.Reader, dst *FileSpec, pod *corev1.Pod, co
 		return nil
 	})
 
-	err = errs.Wait()
+	err = eg.Wait()
 	return err
 }
 
@@ -401,9 +401,11 @@ func (c *KubeClient) FileWrite(src io.Reader, dst *FileSpec, pod *corev1.Pod, co
 //	}()
 //
 // io.Copy(dstFile, reader)
-func (c *KubeClient) FileRead(src *FileSpec, dst io.Writer, pod *corev1.Pod, containerName string) (err error) {
+func (c *KubeClient) FileRead(src *FileSpec, dst io.WriteCloser, pod *corev1.Pod, containerName string) (err error) {
 	srcFile := shellescape.Quote(src.Path)
 	cmdArr := []string{"env", "cat", srcFile}
+
+	defer dst.Close()
 
 	stdoutReader, stderrReader, err := c.Exec(pod, containerName, cmdArr, nil)
 	if err != nil {
@@ -534,7 +536,7 @@ type PortForwardRequest struct {
 // It is to forward port, and return the forwarder.
 func (c *KubeClient) PortForward(req *PortForwardRequest) (*portforward.ForwardedPort, error) {
 	// get the pod
-	pod, err := c.PodGetByName(req.PodName, req.PodNamespace)
+	pod, err := c.PodGetByName(req.PodNamespace, req.PodName)
 	if err != nil {
 		return nil, err
 	}
