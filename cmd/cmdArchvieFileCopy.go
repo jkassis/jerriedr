@@ -58,13 +58,15 @@ func CMDArchiveFileCopy(v *viper.Viper) {
 		}
 	}
 
-	ArchiveFileCopy(v, srcArchiveFile, dstArchiveFile)
+	progressWatcher := ProgressWatcherNew()
+	go progressWatcher.Run()
+	ArchiveFileCopy(v, srcArchiveFile, dstArchiveFile, progressWatcher)
 
 	duration := time.Since(start)
 	core.Log.Warnf("CMDArchiveFileCopy: took %s", duration.String())
 }
 
-func ArchiveFileCopy(v *viper.Viper, srcArchiveFile, dstArchiveFile *schema.ArchiveFile) (err error) {
+func ArchiveFileCopy(v *viper.Viper, srcArchiveFile, dstArchiveFile *schema.ArchiveFile, progressWatcher *ProgressWatcher) (err error) {
 	core.Log.Warnf("starting copy of '%s' to '%s'", srcArchiveFile.Archive.Spec+"/"+srcArchiveFile.Name, dstArchiveFile.Archive.Spec+"/"+dstArchiveFile.Name)
 
 	// get kube client
@@ -74,9 +76,12 @@ func ArchiveFileCopy(v *viper.Viper, srcArchiveFile, dstArchiveFile *schema.Arch
 	eg := &errgroup.Group{}
 
 	// make a pipe
-	pipeR, pipeW := io.Pipe()
+	srcReader, srcWriter := io.Pipe()
+	var progressUpdater func(progress int64)
 
 	// read from the src to the pipe
+	var dstFileSize int64
+	var dstFileFullPath string
 	if srcArchiveFile.Archive.IsStatefulSet() {
 		return fmt.Errorf("cannot copy to/from statefulset archiveFile")
 	} else if srcArchiveFile.Archive.IsPod() {
@@ -91,31 +96,75 @@ func ArchiveFileCopy(v *viper.Viper, srcArchiveFile, dstArchiveFile *schema.Arch
 			return fmt.Errorf("could not get pod: %v", err)
 		}
 
+		dstFileFullPath = srcArchiveFile.Archive.Path + "/" + srcArchiveFile.Name
+
+		// get the file size
+		fileStats, err := kubeClient.FileStatGet(pod, srcArchiveFile.Archive.KubeContainer, dstFileFullPath)
+		if err != nil {
+			return fmt.Errorf("could not get stats for %s: %v", dstFileFullPath, err)
+		}
+		dstFileSize = fileStats.Size
+
 		// read to the pipe writer
 		eg.Go(func() error {
 			return kubeClient.FileRead(
 				&kube.FileSpec{
 					PodNamespace: srcArchiveFile.Archive.KubeNamespace,
 					PodName:      srcArchiveFile.Archive.KubeName,
-					Path:         srcArchiveFile.Archive.Path + "/" + srcArchiveFile.Name,
+					Path:         dstFileFullPath,
 				},
-				pipeW,
+				srcWriter,
 				pod,
 				srcArchiveFile.Archive.KubeContainer,
 			)
 		})
 	} else if srcArchiveFile.Archive.IsLocal() {
-		f, err := os.Open(srcArchiveFile.Archive.Path + "/" + srcArchiveFile.Name)
+		dstFileFullPath = srcArchiveFile.Archive.Path + "/" + srcArchiveFile.Name
+
+		// get the file size
+		fileInfo, err := os.Stat(dstFileFullPath)
+		if err != nil {
+			return fmt.Errorf("could not get stats for %s: %v", dstFileFullPath, err)
+		}
+		dstFileSize = fileInfo.Size()
+
+		f, err := os.Open(dstFileFullPath)
 		if err != nil {
 			return err
 		}
 
 		defer f.Close()
 		eg.Go(func() error {
-			_, err := io.Copy(pipeW, f)
+			_, err := io.Copy(srcWriter, f)
 			return err
 		})
 	}
+
+	// setup the progressUpdater with some fancy pipes
+	progressUpdater = progressWatcher.AddWatch(&Watch{item: dstFileFullPath, unit: "bytes", total: dstFileSize})
+	dstWriterReader, dstWriterWriter := io.Pipe()
+	progressUpdaterReader, progressUpdaterWriter := io.Pipe()
+
+	// read the src into the splitter
+	splitter := io.MultiWriter(dstWriterWriter, progressUpdaterWriter)
+	eg.Go(func() error {
+		_, err := io.Copy(splitter, srcReader)
+		progressUpdaterWriter.Close()
+		dstWriterWriter.Close()
+		return err
+	})
+
+	// read the progress into discard and count bytes
+	eg.Go(func() error {
+		discardBuffer := make([]byte, 8192) // seems to be standard size for blackhole
+		for {
+			n, err := progressUpdaterReader.Read(discardBuffer)
+			if err != nil {
+				return err
+			}
+			progressUpdater(int64(n))
+		}
+	})
 
 	// setup the dstArchive first
 	if dstArchiveFile.Archive.IsStatefulSet() {
@@ -132,9 +181,10 @@ func ArchiveFileCopy(v *viper.Viper, srcArchiveFile, dstArchiveFile *schema.Arch
 			return fmt.Errorf("could not get pod: %v", err)
 		}
 
+		// read into the kube file writer
 		eg.Go(func() error {
 			return kubeClient.FileWrite(
-				pipeR,
+				dstWriterReader,
 				&kube.FileSpec{
 					PodNamespace: dstArchiveFile.Archive.KubeNamespace,
 					PodName:      dstArchiveFile.Archive.KubeName,
@@ -153,17 +203,18 @@ func ArchiveFileCopy(v *viper.Viper, srcArchiveFile, dstArchiveFile *schema.Arch
 		}
 
 		// open the dstFile
-		f, err := os.OpenFile(dstPathFull, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+		dstFile, err := os.OpenFile(dstPathFull, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 		if err != nil {
 			return fmt.Errorf("could not open file  '%s': %v", dstPathFull, err)
 		}
 		defer func() {
-			f.Sync()
-			f.Close()
+			dstFile.Sync()
+			dstFile.Close()
 		}()
 
+		// read into the local file
 		eg.Go(func() error {
-			_, err := io.Copy(f, pipeR)
+			_, err := io.Copy(dstFile, dstWriterReader)
 			return err
 		})
 	}

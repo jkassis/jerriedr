@@ -1,12 +1,14 @@
 package main
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/jkassis/jerrie/core"
 	"github.com/jkassis/jerriedr/cmd/schema"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"golang.org/x/sync/errgroup"
 )
 
 func init() {
@@ -67,33 +69,39 @@ func CMDProdSnapshotGet(v *viper.Viper) {
 		}
 	}
 
+	// present a progressWatcher
+	progressWatcher := ProgressWatcherNew()
+	go progressWatcher.Run()
+
 	// copy files
 	{
 		core.Log.Warnf("CMDProdSnapshotGet: starting")
 		start := time.Now()
-		// errGroup := errgroup.Group{}
+		errGroup := errgroup.Group{}
 		for _, srcArchiveFile := range srcArchiveFileSet.ArchiveFiles {
 			srcArchiveFile := srcArchiveFile
 			dstArchiveFile := &schema.ArchiveFile{
 				Archive: dstArchive,
 				Name:    srcArchiveFile.Archive.Parent.KubeName + "/" + srcArchiveFile.Name,
 			}
-			err := ArchiveFileCopy(v, srcArchiveFile, dstArchiveFile)
-			if err != nil {
-				core.Log.Fatal("could not copy archive file: %v", err)
-			}
 
-			// errGroup.Go(func() error {
-			// 	return ArchiveFileCopy(v, srcArchiveFile, dstArchiveFile)
-			// })
+			errGroup.Go(func() error {
+				err := ArchiveFileCopy(v, srcArchiveFile, dstArchiveFile, progressWatcher)
+				if err != nil {
+					return fmt.Errorf("could not copy archive file: %v", err)
+				}
+				return nil
+			})
 		}
 
-		// err := errGroup.Wait()
-		// if err != nil {
-		// 	core.Log.Error(err)
-		// }
+		err := errGroup.Wait()
+		if err != nil {
+			core.Log.Error(err)
+		}
 
 		duration := time.Since(start)
 		core.Log.Warnf("CMDProdSnapshotGet: took %s", duration.String())
 	}
+
+	progressWatcher.App.Stop()
 }

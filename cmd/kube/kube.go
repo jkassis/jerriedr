@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -435,6 +436,47 @@ func (c *KubeClient) FileRead(src *FileSpec, dst io.WriteCloser, pod *corev1.Pod
 
 	err = errs.Wait()
 	return err
+}
+
+type FileStat struct {
+	UID  int64
+	GID  int64
+	Size int64
+	Name string
+}
+
+func (c *KubeClient) FileStatGet(pod *corev1.Pod, containerName, path string) (fileState *FileStat, err error) {
+	srcFile := shellescape.Quote(path)
+
+	// this appears to be the Alpine Linux variant... :cringe:
+	format := "%u %g %s %N"
+	cmdArr := []string{"env", "stat", "-c", format, srcFile}
+
+	response, err := c.ExecSync(pod, containerName, cmdArr, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	parts := strings.Split(response, " ")
+	uid, err := strconv.ParseInt(parts[0], 0, 64)
+	if err != nil {
+		return nil, fmt.Errorf("FileStatGet: could not convert uid for %s got %s", path, response)
+	}
+	gid, err := strconv.ParseInt(parts[1], 0, 64)
+	if err != nil {
+		return nil, fmt.Errorf("FileStatGet: could not convert gid for %s got %s", path, response)
+	}
+	size, err := strconv.ParseInt(parts[2], 0, 64)
+	if err != nil {
+		return nil, fmt.Errorf("FileStatGet: could not convert size for %s got %s", path, response)
+	}
+
+	return &FileStat{
+		UID:  uid,
+		GID:  gid,
+		Size: size,
+		Name: parts[3],
+	}, nil
 }
 
 // FileRm removes a file from a remote
