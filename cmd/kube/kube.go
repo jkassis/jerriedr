@@ -218,7 +218,7 @@ func (c *KubeClient) Exec(
 	pod *corev1.Pod,
 	containerName string,
 	command []string,
-	stdin io.Reader) (io.Reader, io.Reader, error) {
+	stdinReader io.Reader) (io.Reader, io.Reader, error) {
 	stdoutReader, stdoutWriter := io.Pipe()
 	stderrReader, stderrWriter := io.Pipe()
 
@@ -231,11 +231,12 @@ func (c *KubeClient) Exec(
 		Param("container", containerName).
 		VersionedParams(&corev1.PodExecOptions{
 			Command: command,
-			Stdin:   stdin != nil,
+			Stdin:   stdinReader != nil,
 			Stdout:  true,
 			Stderr:  true,
 			TTY:     false,
 		}, scheme.ParameterCodec)
+
 	exec, err := remotecommand.NewSPDYExecutor(c.Config, "POST", request.URL())
 	if err != nil {
 		return nil, nil, err
@@ -243,7 +244,7 @@ func (c *KubeClient) Exec(
 
 	go func() {
 		_ = exec.Stream(remotecommand.StreamOptions{
-			Stdin:  stdin,
+			Stdin:  stdinReader,
 			Stdout: stdoutWriter,
 			Stderr: stderrWriter,
 			Tty:    false,
@@ -413,16 +414,16 @@ func (c *KubeClient) FileRead(src *FileSpec, dst io.WriteCloser, pod *corev1.Pod
 		return err
 	}
 
-	errs := &errgroup.Group{}
+	eg := &errgroup.Group{}
 
-	// stream to dst
-	errs.Go(func() error {
+	// read stdout
+	eg.Go(func() error {
 		_, err = io.Copy(dst, stdoutReader)
 		return err
 	})
 
-	// stream to err
-	errs.Go(func() error {
+	// read stderr and convert to err
+	eg.Go(func() error {
 		stderr := bytes.NewBuffer(nil)
 		_, err = io.Copy(stderr, stderrReader)
 		if err != nil {
@@ -434,8 +435,7 @@ func (c *KubeClient) FileRead(src *FileSpec, dst io.WriteCloser, pod *corev1.Pod
 		return nil
 	})
 
-	err = errs.Wait()
-	return err
+	return eg.Wait()
 }
 
 type FileStat struct {
@@ -613,6 +613,7 @@ func (c *KubeClient) PortForward(req *PortForwardRequest) (*portforward.Forwarde
 	outR, outW := io.Pipe()
 	errR, errW := io.Pipe()
 
+	// TODO when should I close these pipes?
 	fw, err := portforward.New(dialer,
 		[]string{fmt.Sprintf("%d:%d", req.LocalPort, req.PodPort)},
 		stopCh,
@@ -625,6 +626,7 @@ func (c *KubeClient) PortForward(req *PortForwardRequest) (*portforward.Forwarde
 	// fw.GetPorts()
 
 	// send all output to logs
+	// TODO this isn't quite what we want
 	go StreamAllToLog(fmt.Sprintf("%s/%s: ", req.PodNamespace, req.PodName), outR, errR)
 
 	// stop forwarding if the os closes

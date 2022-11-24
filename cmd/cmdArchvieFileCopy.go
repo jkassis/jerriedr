@@ -107,7 +107,7 @@ func ArchiveFileCopy(v *viper.Viper, srcArchiveFile, dstArchiveFile *schema.Arch
 
 		// read to the pipe writer
 		eg.Go(func() error {
-			return kubeClient.FileRead(
+			err := kubeClient.FileRead(
 				&kube.FileSpec{
 					PodNamespace: srcArchiveFile.Archive.KubeNamespace,
 					PodName:      srcArchiveFile.Archive.KubeName,
@@ -117,6 +117,10 @@ func ArchiveFileCopy(v *viper.Viper, srcArchiveFile, dstArchiveFile *schema.Arch
 				pod,
 				srcArchiveFile.Archive.KubeContainer,
 			)
+			if err != nil {
+				return err
+			}
+			return srcWriter.Close()
 		})
 	} else if srcArchiveFile.Archive.IsLocal() {
 		dstFileFullPath = srcArchiveFile.Archive.Path + "/" + srcArchiveFile.Name
@@ -140,25 +144,31 @@ func ArchiveFileCopy(v *viper.Viper, srcArchiveFile, dstArchiveFile *schema.Arch
 		})
 	}
 
-	// setup the progressUpdater with some fancy pipes
+	// read the src into a splitter to send data to the file and the progressUpdater
 	progressUpdater = progressWatcher.AddWatch(&Watch{item: dstFileFullPath, unit: "bytes", total: dstFileSize})
-	dstWriterReader, dstWriterWriter := io.Pipe()
-	progressUpdaterReader, progressUpdaterWriter := io.Pipe()
-
-	// read the src into the splitter
-	splitter := io.MultiWriter(dstWriterWriter, progressUpdaterWriter)
+	progressPipeReader, progressPipeWriter := io.Pipe()
+	dstPipeReader, dstPipeWriter := io.Pipe()
+	splitter := io.MultiWriter(dstPipeWriter, progressPipeWriter)
 	eg.Go(func() error {
 		_, err := io.Copy(splitter, srcReader)
-		progressUpdaterWriter.Close()
-		dstWriterWriter.Close()
-		return err
+		if err != nil {
+			return fmt.Errorf("could not complete copy from src to splitter: %v", err)
+		}
+		if err := progressPipeWriter.Close(); err != nil {
+			return fmt.Errorf("could not close progressPipeWriter: %v", err)
+		}
+		if err := dstPipeWriter.Close(); err != nil {
+			return fmt.Errorf("could not close dstPipeWriter: %v", err)
+		}
+		return nil
 	})
 
-	// read the progress into discard and count bytes
+	// read the progress into a discard buffer
+	// TODO wish that one could read with coping bytes
 	eg.Go(func() error {
 		discardBuffer := make([]byte, 8192) // seems to be standard size for blackhole
 		for {
-			n, err := progressUpdaterReader.Read(discardBuffer)
+			n, err := progressPipeReader.Read(discardBuffer)
 			if err != nil {
 				return err
 			}
@@ -184,7 +194,7 @@ func ArchiveFileCopy(v *viper.Viper, srcArchiveFile, dstArchiveFile *schema.Arch
 		// read into the kube file writer
 		eg.Go(func() error {
 			return kubeClient.FileWrite(
-				dstWriterReader,
+				dstPipeReader,
 				&kube.FileSpec{
 					PodNamespace: dstArchiveFile.Archive.KubeNamespace,
 					PodName:      dstArchiveFile.Archive.KubeName,
@@ -195,26 +205,33 @@ func ArchiveFileCopy(v *viper.Viper, srcArchiveFile, dstArchiveFile *schema.Arch
 			)
 		})
 	} else if dstArchiveFile.Archive.IsLocal() {
-		dstPathFull := dstArchiveFile.Archive.Path + "/" + dstArchiveFile.Name
-		dstDir := path.Dir(dstPathFull)
+		dstFilePath := dstArchiveFile.Archive.Path + "/" + dstArchiveFile.Name
+		dstDir := path.Dir(dstFilePath)
 		err := os.MkdirAll(dstDir, os.ModePerm)
 		if err != nil {
 			return fmt.Errorf("could not make directory '%s': %v", dstDir, err)
 		}
 
 		// open the dstFile
-		dstFile, err := os.OpenFile(dstPathFull, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+		dstFile, err := os.OpenFile(dstFilePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 		if err != nil {
-			return fmt.Errorf("could not open file  '%s': %v", dstPathFull, err)
+			return fmt.Errorf("could not open file  '%s': %v", dstFilePath, err)
 		}
-		defer func() {
-			dstFile.Sync()
-			dstFile.Close()
-		}()
 
 		// read into the local file
 		eg.Go(func() error {
-			_, err := io.Copy(dstFile, dstWriterReader)
+			_, err := io.Copy(dstFile, dstPipeReader)
+			if err == nil {
+				return fmt.Errorf("copy error from dstPipeReader to dstFile: %v", err)
+			}
+			err = dstFile.Sync()
+			if err == nil {
+				return fmt.Errorf("sync error for dstFile: %v", err)
+			}
+			err = dstFile.Close()
+			if err == nil {
+				return fmt.Errorf("close error for dstFile: %v", err)
+			}
 			return err
 		})
 	}

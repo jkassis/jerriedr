@@ -2,11 +2,7 @@ package main
 
 import (
 	"fmt"
-	"io"
-	"strings"
 	"time"
-
-	"net/http"
 
 	"github.com/google/uuid"
 	"github.com/jkassis/jerrie/core"
@@ -83,10 +79,7 @@ func ServiceSnapshotSnap(v *viper.Viper, services []*schema.Service) (err error)
 
 			core.Log.Warnf("running remote backup for %s", service.Spec)
 
-			var (
-				reqBody io.Reader
-				reqURL  string
-			)
+			var reqBody, reqURL string
 			{
 				if service.IsPod() {
 					// yes. make sure we have a kube client
@@ -107,31 +100,21 @@ func ServiceSnapshotSnap(v *viper.Viper, services []*schema.Service) (err error)
 					localPort := forwardedPort.Local
 
 					{
-						reqBody = strings.NewReader(fmt.Sprintf(requestFormat, uuid.NewString(), "v1"))
+						reqBody = fmt.Sprintf(requestFormat, uuid.NewString(), "v1")
 						reqURL = fmt.Sprintf("%s://%s:%d/raft/leader/read", "http", "localhost", localPort)
 					}
 				} else if service.IsHost() {
-					reqBody = strings.NewReader(fmt.Sprintf(requestFormat, uuid.NewString(), "v1"))
+					reqBody = fmt.Sprintf(requestFormat, uuid.NewString(), "v1")
 					reqURL = fmt.Sprintf("%s://%s:%d/raft/leader/read", "http", service.Host, service.Port)
 				}
 			}
-			req, err := http.NewRequest("POST", reqURL, reqBody)
-			if err != nil {
-				return fmt.Errorf("error while making request for snapshop: %v", err)
-			}
-			// make the request
-			resp, err := http.DefaultClient.Do(req)
-			if err != nil {
-				return err
-			}
 
-			// get response and report
-			defer resp.Body.Close()
-			resBody, err := io.ReadAll(resp.Body)
-			if err != nil {
-				return fmt.Errorf("got error while reading response body for request to %s: %v", reqURL, err)
+			// make the request
+			if res, err := HTTPPost(reqURL, "application/json", reqBody); err != nil {
+				return fmt.Errorf("could not request %s: %v", reqURL, err)
+			} else {
+				core.Log.Warnf("finished %s: %s", service.KubeName, res)
 			}
-			core.Log.Warnf("CMDServiceSnapshotSnap: %s: %d %s", service.KubeName, resp.StatusCode, resBody)
 			return nil
 		})
 	}

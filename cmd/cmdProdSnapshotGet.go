@@ -30,7 +30,6 @@ func init() {
 }
 
 func CMDProdSnapshotGet(v *viper.Viper) {
-	dstArchiveSpec := "local|/var/jerrie/archive/prod"
 
 	// get a kube client
 	kubeClient, kubeErr := KubeClientGet(v)
@@ -56,14 +55,14 @@ func CMDProdSnapshotGet(v *viper.Viper) {
 		srcArchiveFileSet = picker.SelectedSnapshotArchiveFileSet
 	}
 	if srcArchiveFileSet == nil {
-		core.Log.Fatalf("archive set not picked... cancelling operation")
+		core.Log.Fatalf("snapshot not picked... cancelling operation")
 	}
 
 	// get the dstArchvie
 	var dstArchive *schema.Archive
 	{
 		dstArchive = &schema.Archive{}
-		err := dstArchive.Parse(dstArchiveSpec)
+		err := dstArchive.Parse(localProdArchiveSpec)
 		if err != nil {
 			core.Log.Fatalf("could not parse the dstArchiveSpec: %v", err)
 		}
@@ -104,4 +103,11 @@ func CMDProdSnapshotGet(v *viper.Viper) {
 	}
 
 	progressWatcher.App.Stop()
+
+	// report at the end
+	for _, watch := range progressWatcher.watches {
+		message := fmt.Sprintf("[ %12d of %12d %s ] %s", watch.progress, watch.total, watch.unit, watch.item)
+		core.Log.Warnf(message)
+	}
+
 }

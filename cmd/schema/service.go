@@ -126,13 +126,15 @@ func (a *Service) Parse(spec string) error {
 	} else if a.Scheme == "local" {
 		err := fmt.Errorf("%s must be local|<port>", spec)
 
+		a.Host = "localhost"
+
 		if len(parts) != 2 {
 			return err
 		}
 
 		{
-			port, converr := strconv.Atoi(parts[2])
-			if converr != nil {
+			port, convErr := strconv.Atoi(parts[1])
+			if convErr != nil {
 				return err
 			}
 			a.Port = port

@@ -222,7 +222,7 @@ func (a *Archive) FilesFetch(kubeClient *kube.KubeClient) error {
 			}
 		}
 	} else if a.IsLocal() {
-		dirEntries, err := os.ReadDir("/tmp/")
+		dirEntries, err := os.ReadDir(a.Path)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -231,13 +231,14 @@ func (a *Archive) FilesFetch(kubeClient *kube.KubeClient) error {
 			if file.IsDir() {
 				continue
 			}
-			file := &ArchiveFile{
+			fileName := &ArchiveFile{
 				Archive: a,
 				Name:    file.Name(),
 			}
-			err := file.TimestampParseFromName()
+			err := fileName.TimestampParseFromName()
 			if err == nil {
-				files = append(files, file)
+				files = append(files, fileName)
+				core.Log.Debugf("found %s/%s", a.Spec, fileName)
 			}
 		}
 	}
