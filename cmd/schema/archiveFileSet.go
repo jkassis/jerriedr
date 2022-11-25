@@ -20,9 +20,7 @@ func ArchiveFileSetNew() *ArchiveFileSet {
 }
 
 type ArchiveFileSet struct {
-	ArchiveFiles  []*ArchiveFile
-	status        ArchvieFileSetStatus
-	statusMessage string
+	ArchiveFiles []*ArchiveFile
 }
 
 func (sss *ArchiveFileSet) ArchiveFileAdd(af *ArchiveFile) {
@@ -38,10 +36,10 @@ func (ss *ArchiveFileSet) EvaluateStatus() {
 }
 
 func (sss *ArchiveFileSet) NextSeekTime(t time.Time) time.Time {
-	nextSeekTime := sss.ArchiveFiles[0].Time.Add(-time.Millisecond)
-	for i := 1; i < len(sss.ArchiveFiles); i++ {
-		if sss.ArchiveFiles[i].Time.Before(nextSeekTime) {
-			nextSeekTime = sss.ArchiveFiles[i].Time
+	nextSeekTime := t.Add(-time.Millisecond)
+	for _, archiveFile := range sss.ArchiveFiles {
+		if archiveFile.Time.Before(nextSeekTime) {
+			nextSeekTime = archiveFile.Time
 			break
 		}
 	}
@@ -52,12 +50,12 @@ func (sss *ArchiveFileSet) NextSeekTime(t time.Time) time.Time {
 func (sss *ArchiveFileSet) FirstAndLastArchiveFileTime() (first time.Time, last time.Time) {
 	first = time.Now()
 	last = time.Unix(0, 0)
-	for i := 1; i < len(sss.ArchiveFiles); i++ {
-		if sss.ArchiveFiles[i].Time.Before(first) {
-			first = sss.ArchiveFiles[i].Time
+	for _, archiveFile := range sss.ArchiveFiles {
+		if archiveFile.Time.Before(first) {
+			first = archiveFile.Time
 		}
-		if sss.ArchiveFiles[i].Time.After(last) {
-			last = sss.ArchiveFiles[i].Time
+		if archiveFile.Time.After(last) {
+			last = archiveFile.Time
 		}
 	}
 

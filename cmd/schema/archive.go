@@ -34,6 +34,7 @@ type Archive struct {
 	Path          string
 	Parent        *Archive
 	Scheme        string
+	ServiceName   string
 	Spec          string
 }
 
@@ -41,26 +42,29 @@ func (a *Archive) Parse(spec string) error {
 	parts := strings.Split(spec, "|")
 	a.Scheme = parts[0]
 	if a.Scheme == "statefulset" {
-		err := fmt.Errorf("%s must be statefulset|<kubeNamespace>/<kubeName>|<pathPattern> where <pathPattern> can contain '<pod>' to insert the pod Name", spec)
+		err := fmt.Errorf("%s must be statefulset|<namespace>/<statefulSet>|<pathPattern> where <pathPattern> can contain '<pod>' to insert the pod Name", spec)
 
 		if len(parts) != 3 {
 			return err
 		}
 
-		statefulSet := parts[1]
-		if !strings.Contains(statefulSet, "/") {
-			return err
-		}
+		{
+			serviceSpec := parts[1]
+			if !strings.Contains(serviceSpec, "/") {
+				return err
+			}
 
-		statefulSetParts := strings.Split(statefulSet, "/")
-		a.KubeNamespace = statefulSetParts[0]
-		if a.KubeNamespace == "" {
-			return err
-		}
+			serviceSpecParts := strings.Split(serviceSpec, "/")
+			a.KubeNamespace = serviceSpecParts[0]
+			if a.KubeNamespace == "" {
+				return err
+			}
 
-		a.KubeName = statefulSetParts[1]
-		if a.KubeName == "" {
-			return err
+			a.KubeName = serviceSpecParts[1]
+			if a.KubeName == "" {
+				return err
+			}
+			a.ServiceName = a.KubeName
 		}
 
 		a.Path = parts[2]
@@ -68,26 +72,33 @@ func (a *Archive) Parse(spec string) error {
 			return err
 		}
 	} else if a.Scheme == "pod" {
-		err := fmt.Errorf("%s must be pod|<kubeNamespace>/<kubeName>|<path>", spec)
+		err := fmt.Errorf("%s must be pod|<namespace>/<statefulSet>/<pod>|<path>", spec)
 
 		if len(parts) != 3 {
 			return err
 		}
 
-		host := parts[1]
-		if !strings.Contains(host, "/") {
-			return err
-		}
+		{
+			serviceSpec := parts[1]
+			if !strings.Contains(serviceSpec, "/") {
+				return err
+			}
 
-		hostParts := strings.Split(host, "/")
-		a.KubeNamespace = hostParts[0]
-		if a.KubeNamespace == "" {
-			return err
-		}
+			serviceSpecParts := strings.Split(serviceSpec, "/")
+			a.KubeNamespace = serviceSpecParts[0]
+			if a.KubeNamespace == "" {
+				return err
+			}
 
-		a.KubeName = hostParts[1]
-		if a.KubeName == "" {
-			return err
+			a.ServiceName = serviceSpecParts[1]
+			if a.ServiceName == "" {
+				return err
+			}
+
+			a.KubeName = serviceSpecParts[2]
+			if a.KubeName == "" {
+				return err
+			}
 		}
 
 		a.Path = parts[2]
@@ -95,14 +106,28 @@ func (a *Archive) Parse(spec string) error {
 			return err
 		}
 	} else if a.Scheme == "host" {
-		err := fmt.Errorf("%s must be host|<hostName>|<path>", spec)
+		err := fmt.Errorf("%s must be host|<hostName>/<service>|<path>", spec)
 
 		if len(parts) != 3 {
 			return err
 		}
-		a.Host = parts[1]
-		if a.Host == "" {
-			return err
+
+		{
+			serviceSpec := parts[1]
+			if !strings.Contains(serviceSpec, "/") {
+				return err
+			}
+
+			serviceSpecParts := strings.Split(parts[1], "/")
+			a.Host = serviceSpecParts[0]
+			if a.Host == "" {
+				return err
+			}
+
+			a.ServiceName = serviceSpecParts[1]
+			if a.Host == "" {
+				return err
+			}
 		}
 
 		a.Path = parts[2]
@@ -110,12 +135,18 @@ func (a *Archive) Parse(spec string) error {
 			return err
 		}
 	} else if a.Scheme == "local" {
-		err := fmt.Errorf("%s must be local|<path>", spec)
+		err := fmt.Errorf("%s must be local|<service>|<path>", spec)
 
-		if len(parts) != 2 {
+		if len(parts) != 3 {
 			return err
 		}
-		a.Path = parts[1]
+
+		a.ServiceName = parts[1]
+		if a.ServiceName == "" {
+			return err
+		}
+
+		a.Path = parts[2]
 		if a.Path == "" {
 			return err
 		}
@@ -157,7 +188,8 @@ func (a *Archive) PodArchiveGet(replica int) (*Archive, error) {
 		Path:          podPath,
 		Parent:        a,
 		Scheme:        "pod",
-		Spec:          fmt.Sprintf("pod|%s/%s|%s", a.KubeNamespace, podName, podPath),
+		ServiceName:   a.ServiceName,
+		Spec:          fmt.Sprintf("pod|%s/%s/%s|%s", a.KubeNamespace, a.ServiceName, podName, podPath),
 	}, nil
 }
 
@@ -219,6 +251,8 @@ func (a *Archive) FilesFetch(kubeClient *kube.KubeClient) error {
 			if err == nil {
 				files = append(files, file)
 				core.Log.Debugf("found %s/%s", a.Spec, podFileName)
+			} else {
+				core.Log.Warnf("could not parse archiveFile timestamp from %s", podFileName)
 			}
 		}
 	} else if a.IsLocal() {
@@ -239,6 +273,8 @@ func (a *Archive) FilesFetch(kubeClient *kube.KubeClient) error {
 			if err == nil {
 				files = append(files, fileName)
 				core.Log.Debugf("found %s/%s", a.Spec, fileName)
+			} else {
+				core.Log.Warnf("could not parse archiveFile timestamp from %s", fileName)
 			}
 		}
 	}
@@ -246,6 +282,40 @@ func (a *Archive) FilesFetch(kubeClient *kube.KubeClient) error {
 	sort.Sort(ByMostRecent(files))
 	a.Files = files
 	a.FilesFiltered = files
+	return nil
+}
+
+func (a *Archive) Stage(kubeClient *kube.KubeClient,
+	srcArchiveFile *ArchiveFile,
+	dstArchive *Archive) error {
+	if a.IsStatefulSet() {
+		return fmt.Errorf("Archive.Stage not allowed for statefulset archives")
+	} else if a.IsPod() {
+		return fmt.Errorf("Archive.Stage not allowed for pod archives")
+	} else if a.IsLocal() {
+		// clear the content of the restore folder
+		if err := os.RemoveAll(a.Path); err != nil {
+			core.Log.Fatalf("cound not clear the content of the restore folder: %v", err)
+		}
+
+		// recreate it
+		if err := os.MkdirAll(a.Path, 0774); err != nil {
+			core.Log.Fatalf("cound not create the restore folder: %v", err)
+		}
+
+		// can only do local to local
+		if srcArchiveFile.Archive.Scheme != "local" {
+			return fmt.Errorf("can only restore to local from local. srcArchive is %v", srcArchiveFile.Archive)
+		}
+
+		// make a symlink
+		srcArchiveFilePath := srcArchiveFile.Archive.Path + "/" + srcArchiveFile.Name
+		dstArchiveFilePath := dstArchive.Path + "/" + srcArchiveFile.Name
+		err := os.Symlink(srcArchiveFilePath, dstArchiveFilePath)
+		if err != nil {
+			core.Log.Fatalf("cound not create symlink: src %s to %s: %v", srcArchiveFilePath, dstArchiveFilePath, err)
+		}
+	}
 	return nil
 }
 

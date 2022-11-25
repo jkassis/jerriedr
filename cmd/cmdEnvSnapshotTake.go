@@ -34,8 +34,6 @@ func init() {
 	MAIN.AddCommand(c)
 }
 
-const requestFormat = ` { "UUID": "%s", "Fn": "/%s/Backup", "Body": {} }`
-
 func CMDServiceSnapshotTake(v *viper.Viper) {
 	start := time.Now()
 	core.Log.Warnf("CMDServiceSnapshotTake: starting")
@@ -81,6 +79,11 @@ func ServiceSnapshotTake(v *viper.Viper, services []*schema.Service) (err error)
 
 			var reqBody, reqURL string
 			{
+				reqBody = fmt.Sprintf(
+					` { "UUID": "%s", "Fn": "%s", "Body": {} }`,
+					uuid.NewString(),
+					service.BackupURL)
+
 				if service.IsPod() {
 					// yes. make sure we have a kube client
 					if kubeErr != nil {
@@ -98,16 +101,10 @@ func ServiceSnapshotTake(v *viper.Viper, services []*schema.Service) (err error)
 						return fmt.Errorf("could not port forward to kube service %s: %v", service.Spec, err)
 					}
 					localPort := forwardedPort.Local
-
-					{
-						reqBody = fmt.Sprintf(requestFormat, uuid.NewString(), "v1")
-						reqURL = fmt.Sprintf("%s://%s:%d/raft/leader/read", "http", "localhost", localPort)
-					}
+					reqURL = fmt.Sprintf("%s://%s:%d/raft/leader/read", "http", "localhost", localPort)
 				} else if service.IsHost() {
-					reqBody = fmt.Sprintf(requestFormat, uuid.NewString(), "v1")
 					reqURL = fmt.Sprintf("http://%s:%d/raft/leader/read", service.Host, service.Port)
 				} else if service.IsLocal() {
-					reqBody = fmt.Sprintf(requestFormat, uuid.NewString(), "v1")
 					reqURL = fmt.Sprintf("http://localhost:%d/raft/leader/read", service.Port)
 				}
 			}

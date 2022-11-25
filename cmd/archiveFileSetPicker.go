@@ -143,7 +143,7 @@ func (p *ArchiveFileSetPicker) Select(row, col int) {
 	core.Log.Warnf("retrieving snapshot from '%s'", selectedCell.Text)
 }
 
-func (p *ArchiveFileSetPicker) ArchiveSetPut(as *schema.ArchiveSet) {
+func (p *ArchiveFileSetPicker) ArchiveSetPut(as *schema.ArchiveSet) *ArchiveFileSetPicker {
 	p.ArchiveSet = as
 
 	// add 1 row per snapshot
@@ -162,10 +162,14 @@ func (p *ArchiveFileSetPicker) ArchiveSetPut(as *schema.ArchiveSet) {
 	}
 
 	p.SelectedSnapshotViewRender(0, 0)
+
+	return p
 }
 
-func (p *ArchiveFileSetPicker) Run() {
+func (p *ArchiveFileSetPicker) Run() *ArchiveFileSetPicker {
 	if err := p.App.Run(); err != nil {
 		panic(err)
 	}
+
+	return p
 }

@@ -10,36 +10,38 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func CMDEnvSnapshotGet(v *viper.Viper, srcArchiveSpecs []string, dstArchiveSpec string) {
+func CMDEnvSnapshotGet(v *viper.Viper, srcArchiveSpecs, dstArchiveSpecs []string) {
+	var err error
+
+	// get src and dst archiveSets
+	var srcArchiveSet, dstArchiveSet *schema.ArchiveSet
+	{
+		srcArchiveSet := schema.ArchiveSetNew()
+		err := srcArchiveSet.ArchiveAddAll(srcArchiveSpecs, "/backup")
+		if err != nil {
+			core.Log.Fatalf("could not add srcArchive %v", err)
+		}
+
+		dstArchiveSet := schema.ArchiveSetNew()
+		err = dstArchiveSet.ArchiveAddAll(dstArchiveSpecs, "")
+		if err != nil {
+			core.Log.Fatalf("could not add dstArchive %v", err)
+		}
+	}
+
 	// pick a snapshot set
 	var srcArchiveFileSet *schema.ArchiveFileSet
 	{
-		srcArchiveSet := schema.ArchiveSetNew()
-		for _, srcArchiveSpec := range srcArchiveSpecs {
-			srcArchiveSet.ArchiveAdd(srcArchiveSpec)
-		}
-		err := srcArchiveSet.FilesFetch(nil)
+		err = srcArchiveSet.FilesFetch(nil)
 		if err != nil {
 			core.Log.Fatalf("failed to get files for cluster archive set: %v", err)
 		}
 
-		picker := ArchiveFileSetPickerNew()
-		picker.ArchiveSetPut(srcArchiveSet)
-		picker.Run()
+		picker := ArchiveFileSetPickerNew().ArchiveSetPut(srcArchiveSet).Run()
 		srcArchiveFileSet = picker.SelectedSnapshotArchiveFileSet
 	}
 	if srcArchiveFileSet == nil {
 		core.Log.Fatalf("snapshot not picked... cancelling operation")
-	}
-
-	// get the dstArchvie
-	var dstArchive *schema.Archive
-	{
-		dstArchive = &schema.Archive{}
-		err := dstArchive.Parse(dstArchiveSpec)
-		if err != nil {
-			core.Log.Fatalf("could not parse the dstArchiveSpec: %v", err)
-		}
 	}
 
 	// present a progressWatcher
@@ -53,9 +55,14 @@ func CMDEnvSnapshotGet(v *viper.Viper, srcArchiveSpecs []string, dstArchiveSpec 
 		errGroup := errgroup.Group{}
 		for _, srcArchiveFile := range srcArchiveFileSet.ArchiveFiles {
 			srcArchiveFile := srcArchiveFile
+			dstArchive, err := dstArchiveSet.ArchiveGetByService(srcArchiveFile.Archive.ServiceName)
+			if err != nil {
+				core.Log.Fatalf("couldn't find dstArchive: %v", dstArchive)
+			}
+
 			dstArchiveFile := &schema.ArchiveFile{
 				Archive: dstArchive,
-				Name:    srcArchiveFile.Archive.Parent.KubeName + "/" + srcArchiveFile.Name,
+				Name:    srcArchiveFile.Name,
 			}
 
 			errGroup.Go(func() error {

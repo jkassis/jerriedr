@@ -24,5 +24,7 @@ func init() {
 }
 
 func CMDProdSnapshotGet(v *viper.Viper) {
-	CMDEnvSnapshotGet(v, prodArchiveSpecs, localProdArchiveSpec)
+	srcArchiveSpecs := prodArchiveSpecs
+	dstArchiveSpecs := localProdArchiveSpecs
+	CMDEnvSnapshotGet(v, srcArchiveSpecs, dstArchiveSpecs)
 }

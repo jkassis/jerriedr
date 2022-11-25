@@ -11,21 +11,20 @@ var prodServiceSpecs []string = []string{
 }
 
 var prodArchiveSpecs []string = []string{
-	"statefulset|fg/dockie|/var/data/single/<pod>-server-0/backup",
-	"statefulset|fg/ledgie|/var/data/single/<pod>-server-0/backup",
-	"statefulset|fg/tickie|/var/data/single/<pod>-server-0/backup",
-	"statefulset|fg/dubbie|/var/data/single/<pod>-server-0/backup",
-	"statefulset|fg/keevie|/var/data/single/<pod>-server-0/backup",
-	"statefulset|fg/permie|/var/data/single/<pod>-server-0/backup",
+	"statefulset|fg/dockie|/var/data/single/<pod>-server-0",
+	"statefulset|fg/ledgie|/var/data/single/<pod>-server-0",
+	"statefulset|fg/tickie|/var/data/single/<pod>-server-0",
+	"statefulset|fg/dubbie|/var/data/single/<pod>-server-0",
+	"statefulset|fg/keevie|/var/data/single/<pod>-server-0",
+	"statefulset|fg/permie|/var/data/single/<pod>-server-0",
 }
 
 // conf for local storage for prodArchive
-var localProdArchiveSpec string = "local|/var/jerrie/archive/prod"
-var localProdServiceArchiveSpecs []string = []string{
-	"local|/var/jerrie/archive/prod/dockie",
-	"local|/var/jerrie/archive/prod/dubbie",
-	"local|/var/jerrie/archive/prod/keevie",
-	"local|/var/jerrie/archive/prod/ledgie",
-	"local|/var/jerrie/archive/prod/permie",
-	"local|/var/jerrie/archive/prod/tickie",
+var localProdArchiveSpecs []string = []string{
+	"local|dockie|/var/jerrie/archive/prod/dockie",
+	"local|dubbie|/var/jerrie/archive/prod/dubbie",
+	"local|keevie|/var/jerrie/archive/prod/keevie",
+	"local|ledgie|/var/jerrie/archive/prod/ledgie",
+	"local|permie|/var/jerrie/archive/prod/permie",
+	"local|tickie|/var/jerrie/archive/prod/tickie",
 }

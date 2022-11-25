@@ -1,21 +1,33 @@
 package main
 
 // conf for the dev service
+var devFromProdServiceSpecs []string = []string{
+	"local|dockie|10001|/v1/Backup|/v1/Restore/Dockie",
+	"local|dubbie|10001|/v1/Backup|/v1/Restore/Other",
+	"local|keevie|10001|/v1/Backup|/v1/Restore/Other",
+	"local|ledgie|10001|/v1/Backup|/v1/Restore/Other",
+	"local|permie|10001|/v1/Backup|/v1/Restore/Other",
+	"local|tickie|10001|/v1/Backup|/v1/Restore/Other",
+}
+
+var devFromProdArchiveSpecs []string = []string{
+	"local|multi|/var/multi/single/local-server-0",
+	"local|dubbie|/var/multi/single/local-server-0",
+	"local|keevie|/var/multi/single/local-server-0",
+	"local|ledgie|/var/multi/single/local-server-0",
+	"local|permie|/var/multi/single/local-server-0",
+	"local|tickie|/var/multi/single/local-server-0",
+}
+
 var devServiceSpecs []string = []string{
-	"local|10001",
+	"local|multi|10001|/v1/Backup|/v1/Restore/Dockie",
 }
+
 var devArchiveSpecs []string = []string{
-	"statefulset|fg/dockie|/var/data/single/<pod>-server-0/backup",
-	"statefulset|fg/ledgie|/var/data/single/<pod>-server-0/backup",
-	"statefulset|fg/tickie|/var/data/single/<pod>-server-0/backup",
-	"statefulset|fg/dubbie|/var/data/single/<pod>-server-0/backup",
-	"statefulset|fg/keevie|/var/data/single/<pod>-server-0/backup",
-	"statefulset|fg/permie|/var/data/single/<pod>-server-0/backup",
+	"local|multi|/var/multi/single/local-server-0",
 }
-var devServiceRestoreFolder string = "/var/multi/single/local-server-0/restore"
 
 // conf for local storage of devArchive
-var localDevArchiveSpec string = "local|/var/jerrie/archive/dev"
-var localDevServiceArchiveSpecs []string = []string{
-	"local|/var/jerrie/archive/dev/multi",
+var localDevArchiveSpecs []string = []string{
+	"local|multi|/var/jerrie/archive/dev/multi",
 }

@@ -22,6 +22,10 @@ func (af *ArchiveFile) Parse(spec string) error {
 	return af.Archive.Parse(spec[:i])
 }
 
+func (af *ArchiveFile) Path() string {
+	return af.Archive.Path + "/" + af.Name
+}
+
 func (af *ArchiveFile) TimestampParseFromName() error {
 	if !strings.HasSuffix(af.Name, ".bak") {
 		return fmt.Errorf("%s does not appear to be a .bak file", af.Name)

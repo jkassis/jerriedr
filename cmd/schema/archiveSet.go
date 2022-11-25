@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/jkassis/jerriedr/cmd/kube"
@@ -19,14 +20,35 @@ type ArchiveSet struct {
 	sss      *ArchiveFileSet
 }
 
-func (as *ArchiveSet) ArchiveAdd(archiveSpec string) error {
+func (as *ArchiveSet) ArchiveAdd(archiveSpec string) (a *Archive, err error) {
 	archive := ArchiveNew()
-	err := archive.Parse(archiveSpec)
+	err = archive.Parse(archiveSpec)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	as.Archives = append(as.Archives, archive)
+	return a, nil
+}
+
+func (as *ArchiveSet) ArchiveAddAll(archiveSpecs []string, pathSuffix string) error {
+	for _, archiveSpec := range archiveSpecs {
+		a, err := as.ArchiveAdd(archiveSpec)
+		if err != nil {
+			return err
+		}
+		a.Path += pathSuffix
+	}
 	return nil
+}
+
+func (as *ArchiveSet) ArchiveGetByService(service string) (a *Archive, err error) {
+	for _, archive := range as.Archives {
+		if archive.ServiceName == service {
+			return archive, nil
+		}
+	}
+
+	return nil, fmt.Errorf("could not find archive for service '%s' have only these... %v", service, as.Archives)
 }
 
 func (as *ArchiveSet) FilesFetch(kubeClient *kube.KubeClient) error {
