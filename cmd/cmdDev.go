@@ -1,14 +1,28 @@
 package main
 
-var localDevServiceSpec string = "local|10001"
-var localDevRestoreFolder string = "/var/multi/single/local-server-0/restore"
+// conf for the dev service
+var devServiceSpecs []string = []string{
+	"local|10001",
+}
+var devArchiveSpecs []string = []string{
+	"statefulset|fg/dockie|/var/data/single/<pod>-server-0/backup",
+	"statefulset|fg/ledgie|/var/data/single/<pod>-server-0/backup",
+	"statefulset|fg/tickie|/var/data/single/<pod>-server-0/backup",
+	"statefulset|fg/dubbie|/var/data/single/<pod>-server-0/backup",
+	"statefulset|fg/keevie|/var/data/single/<pod>-server-0/backup",
+	"statefulset|fg/permie|/var/data/single/<pod>-server-0/backup",
+}
+var devServiceRestoreFolder string = "/var/multi/single/local-server-0/restore"
 
-// used to get get snapshots from prod
-// will contain one subfolder per stateful set service
+// conf for local storage of dev archives
+var localDevArchiveSpec string = "local|/var/jerrie/archive/dev"
+var localDevServiceArchiveSpecs []string = []string{
+	"local|/var/jerrie/archive/dev/multi",
+}
+
+// storage for prod archives
 var localProdArchiveSpec string = "local|/var/jerrie/archive/prod"
-
-// used to put snapshots to prod and restore to dev
-var localProdArchiveSpecs []string = []string{
+var localProdServiceArchiveSpecs []string = []string{
 	"local|/var/jerrie/archive/prod/dockie",
 	"local|/var/jerrie/archive/prod/dubbie",
 	"local|/var/jerrie/archive/prod/keevie",

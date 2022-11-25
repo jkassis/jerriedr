@@ -21,7 +21,7 @@ func init() {
 		Short: "Trigger a remote service to take a snapshot.",
 		Long:  ``,
 		Run: func(cmd *cobra.Command, args []string) {
-			CMDServiceSnapshotSnap(v)
+			CMDServiceSnapshotTake(v)
 		},
 	}
 
@@ -36,9 +36,9 @@ func init() {
 
 const requestFormat = ` { "UUID": "%s", "Fn": "/%s/Backup", "Body": {} }`
 
-func CMDServiceSnapshotSnap(v *viper.Viper) {
+func CMDServiceSnapshotTake(v *viper.Viper) {
 	start := time.Now()
-	core.Log.Warnf("CMDServiceSnapshotSnap: starting")
+	core.Log.Warnf("CMDServiceSnapshotTake: starting")
 
 	// get services from serviceSpecs
 	serviceSpecs := v.GetStringSlice(FLAG_SERVICE)
@@ -56,13 +56,13 @@ func CMDServiceSnapshotSnap(v *viper.Viper) {
 		services = append(services, service)
 	}
 
-	ServiceSnapshotSnap(v, services)
+	ServiceSnapshotTake(v, services)
 
 	duration := time.Since(start)
-	core.Log.Warnf("CMDServiceSnapshotSnap: took %s", duration.String())
+	core.Log.Warnf("CMDServiceSnapshotTake: took %s", duration.String())
 }
 
-func ServiceSnapshotSnap(v *viper.Viper, services []*schema.Service) (err error) {
+func ServiceSnapshotTake(v *viper.Viper, services []*schema.Service) (err error) {
 	// establish an errgroup
 	eg := errgroup.Group{}
 
@@ -105,7 +105,10 @@ func ServiceSnapshotSnap(v *viper.Viper, services []*schema.Service) (err error)
 					}
 				} else if service.IsHost() {
 					reqBody = fmt.Sprintf(requestFormat, uuid.NewString(), "v1")
-					reqURL = fmt.Sprintf("%s://%s:%d/raft/leader/read", "http", service.Host, service.Port)
+					reqURL = fmt.Sprintf("http://%s:%d/raft/leader/read", service.Host, service.Port)
+				} else if service.IsLocal() {
+					reqBody = fmt.Sprintf(requestFormat, uuid.NewString(), "v1")
+					reqURL = fmt.Sprintf("http://localhost:%d/raft/leader/read", service.Port)
 				}
 			}
 

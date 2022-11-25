@@ -35,7 +35,7 @@ func CMDDevServiceRestoreFromProd(v *viper.Viper) {
 	var srcArchiveFileSet *schema.ArchiveFileSet
 	{
 		srcArchiveSet := schema.ArchiveSetNew()
-		for _, srcArchiveSpec := range localProdArchiveSpecs {
+		for _, srcArchiveSpec := range localProdServiceArchiveSpecs {
 			srcArchiveSet.ArchiveAdd(srcArchiveSpec)
 		}
 
@@ -52,7 +52,7 @@ func CMDDevServiceRestoreFromProd(v *viper.Viper) {
 			}
 		}
 		if !hasFiles {
-			core.Log.Fatalf("found no snapshots in %v", localProdArchiveSpecs)
+			core.Log.Fatalf("found no snapshots in %v", localProdServiceArchiveSpecs)
 		}
 
 		picker := ArchiveFileSetPickerNew()
@@ -68,7 +68,7 @@ func CMDDevServiceRestoreFromProd(v *viper.Viper) {
 	var devService *schema.Service
 	{
 		devService = &schema.Service{}
-		err := devService.Parse(localDevServiceSpec)
+		err := devService.Parse(devServiceSpec)
 		if err != nil {
 			core.Log.Fatalf("could not parse the localDevServiceSpec: %v", err)
 		}
@@ -89,19 +89,19 @@ func CMDDevServiceRestoreFromProd(v *viper.Viper) {
 	{
 		for _, srcArchiveFile := range srcArchiveFileSet.ArchiveFiles {
 			// clear the content of the restore folder
-			if err := os.RemoveAll(localDevRestoreFolder); err != nil {
+			if err := os.RemoveAll(devServiceRestoreFolder); err != nil {
 				core.Log.Fatalf("cound not clear the content of the restore folder: %v", err)
 			}
 
 			// recreate it
-			if err := os.MkdirAll(localDevRestoreFolder, 0774); err != nil {
+			if err := os.MkdirAll(devServiceRestoreFolder, 0774); err != nil {
 				core.Log.Fatalf("cound not create the restore folder: %v", err)
 			}
 
 			// symlink to the the srcArchive
 			{
 				srcArchiveFilePath := srcArchiveFile.Archive.Path + "/" + srcArchiveFile.Name
-				dstArchiveFilePath := localDevRestoreFolder + "/" + srcArchiveFile.Name
+				dstArchiveFilePath := devServiceRestoreFolder + "/" + srcArchiveFile.Name
 				err := os.Symlink(srcArchiveFilePath, dstArchiveFilePath)
 				if err != nil {
 					core.Log.Fatalf("cound not create symlink: src %s to %s: %v", srcArchiveFilePath, dstArchiveFilePath, err)
