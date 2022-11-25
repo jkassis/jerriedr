@@ -37,7 +37,7 @@ func init() {
 
 func CMDArchiveFileCopy(v *viper.Viper) {
 	start := time.Now()
-	core.Log.Warnf("CMDArchiveFileCopy: starting")
+	core.Log.Warnf("archiveFileCopy: starting")
 
 	// get the archive files
 	var srcArchiveFile, dstArchiveFile *schema.ArchiveFile
@@ -46,7 +46,7 @@ func CMDArchiveFileCopy(v *viper.Viper) {
 		srcArchiveFile = &schema.ArchiveFile{}
 		err := srcArchiveFile.Parse(srcArchiveFileSpec)
 		if err != nil {
-			core.Log.Fatalf("CMDArchiveFileCopy: %v", err)
+			core.Log.Fatalf("archiveFileCopy: %v", err)
 		}
 	}
 	{
@@ -54,7 +54,7 @@ func CMDArchiveFileCopy(v *viper.Viper) {
 		dstArchiveFile = &schema.ArchiveFile{}
 		err := dstArchiveFile.Parse(dstArchiveFileSpec)
 		if err != nil {
-			core.Log.Fatalf("CMDArchiveFileCopy: %v", err)
+			core.Log.Fatalf("archiveFileCopy: %v", err)
 		}
 	}
 
@@ -63,7 +63,7 @@ func CMDArchiveFileCopy(v *viper.Viper) {
 	ArchiveFileCopy(v, srcArchiveFile, dstArchiveFile, progressWatcher)
 
 	duration := time.Since(start)
-	core.Log.Warnf("CMDArchiveFileCopy: took %s", duration.String())
+	core.Log.Warnf("archiveFileCopy: took %s", duration.String())
 }
 
 func ArchiveFileCopy(v *viper.Viper, srcArchiveFile, dstArchiveFile *schema.ArchiveFile, progressWatcher *ProgressWatcher) (err error) {

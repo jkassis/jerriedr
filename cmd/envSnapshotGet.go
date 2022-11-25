@@ -50,7 +50,7 @@ func CMDEnvSnapshotGet(v *viper.Viper, srcArchiveSpecs, dstArchiveSpecs []string
 
 	// copy files
 	{
-		core.Log.Warnf("CMDSnapshotGet: starting")
+		core.Log.Warnf("snapshotGet: starting")
 		start := time.Now()
 		errGroup := errgroup.Group{}
 		for _, srcArchiveFile := range srcArchiveFileSet.ArchiveFiles {
@@ -80,7 +80,7 @@ func CMDEnvSnapshotGet(v *viper.Viper, srcArchiveSpecs, dstArchiveSpecs []string
 		}
 
 		duration := time.Since(start)
-		core.Log.Warnf("CMDSnapshotGet: took %s", duration.String())
+		core.Log.Warnf("snapshotGet: took %s", duration.String())
 	}
 
 	progressWatcher.App.Stop()

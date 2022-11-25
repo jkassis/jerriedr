@@ -33,7 +33,7 @@ func init() {
 
 func CMDProdSnapshotTake(v *viper.Viper) {
 	start := time.Now()
-	core.Log.Warnf("CMDProdSnapshotTake: starting")
+	core.Log.Warnf("prodSnapshotTake: starting")
 
 	// for each service
 	services := make([]*schema.Service, 0)
@@ -52,5 +52,5 @@ func CMDProdSnapshotTake(v *viper.Viper) {
 	}
 
 	duration := time.Since(start)
-	core.Log.Warnf("CMDProdSnapshotTake: took %s", duration.String())
+	core.Log.Warnf("prodSnapshotTake: took %s", duration.String())
 }
