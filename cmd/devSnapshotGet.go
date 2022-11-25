@@ -26,5 +26,5 @@ func init() {
 func CMDDevSnapshotGet(v *viper.Viper) {
 	srcArchiveSpecs := devArchiveSpecs
 	dstArchiveSpecs := devRepoArchiveSpecs
-	CMDEnvSnapshotGet(v, srcArchiveSpecs, dstArchiveSpecs)
+	EnvSnapshotGet(v, srcArchiveSpecs, dstArchiveSpecs)
 }

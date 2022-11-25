@@ -10,19 +10,21 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func CMDEnvSnapshotGet(v *viper.Viper, srcArchiveSpecs, dstArchiveSpecs []string) {
+func EnvSnapshotGet(v *viper.Viper, srcArchiveSpecs, dstArchiveSpecs []string) {
 	var err error
+
+	kubeClient, _ := KubeClientGet(v)
 
 	// get src and dst archiveSets
 	var srcArchiveSet, dstArchiveSet *schema.ArchiveSet
 	{
-		srcArchiveSet := schema.ArchiveSetNew()
+		srcArchiveSet = schema.ArchiveSetNew()
 		err := srcArchiveSet.ArchiveAddAll(srcArchiveSpecs, "/backup")
 		if err != nil {
 			core.Log.Fatalf("could not add srcArchive %v", err)
 		}
 
-		dstArchiveSet := schema.ArchiveSetNew()
+		dstArchiveSet = schema.ArchiveSetNew()
 		err = dstArchiveSet.ArchiveAddAll(dstArchiveSpecs, "")
 		if err != nil {
 			core.Log.Fatalf("could not add dstArchive %v", err)
@@ -32,7 +34,7 @@ func CMDEnvSnapshotGet(v *viper.Viper, srcArchiveSpecs, dstArchiveSpecs []string
 	// pick a snapshot set
 	var srcArchiveFileSet *schema.ArchiveFileSet
 	{
-		err = srcArchiveSet.FilesFetch(nil)
+		err = srcArchiveSet.FilesFetch(kubeClient)
 		if err != nil {
 			core.Log.Fatalf("failed to get files for cluster archive set: %v", err)
 		}
@@ -76,7 +78,7 @@ func CMDEnvSnapshotGet(v *viper.Viper, srcArchiveSpecs, dstArchiveSpecs []string
 
 		err := errGroup.Wait()
 		if err != nil {
-			core.Log.Error(err)
+			core.Log.Fatalf("problem with copy: %v", err)
 		}
 
 		duration := time.Since(start)

@@ -197,6 +197,10 @@ func (a *Archive) FilesFetch(kubeClient *kube.KubeClient) error {
 	files := make([]*ArchiveFile, 0)
 
 	if a.IsStatefulSet() {
+		if kubeClient == nil {
+			return fmt.Errorf("must have kubeClient")
+		}
+
 		// get the statefulSet
 		statefulSet, err := kubeClient.StatefulSetGetByName(a.KubeNamespace, a.KubeName)
 		if err != nil {
@@ -226,6 +230,10 @@ func (a *Archive) FilesFetch(kubeClient *kube.KubeClient) error {
 			return err
 		}
 	} else if a.IsPod() {
+		if kubeClient == nil {
+			return fmt.Errorf("must have kubeClient")
+		}
+
 		// get the pod
 		pod, err := kubeClient.PodGetByName(a.KubeNamespace, a.KubeName)
 		if err != nil {
@@ -289,8 +297,16 @@ func (a *Archive) Stage(kubeClient *kube.KubeClient,
 	srcArchiveFile *ArchiveFile,
 	dstArchive *Archive) error {
 	if a.IsStatefulSet() {
+		if kubeClient == nil {
+			return fmt.Errorf("must have kubeClient")
+		}
+
 		return fmt.Errorf("Archive.Stage not allowed for statefulset archives")
 	} else if a.IsPod() {
+		if kubeClient == nil {
+			return fmt.Errorf("must have kubeClient")
+		}
+
 		return fmt.Errorf("Archive.Stage not allowed for pod archives")
 	} else if a.IsLocal() {
 		// clear the content of the restore folder

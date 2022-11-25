@@ -20,14 +20,14 @@ type ArchiveSet struct {
 	sss      *ArchiveFileSet
 }
 
-func (as *ArchiveSet) ArchiveAdd(archiveSpec string) (a *Archive, err error) {
-	archive := ArchiveNew()
+func (as *ArchiveSet) ArchiveAdd(archiveSpec string) (archive *Archive, err error) {
+	archive = ArchiveNew()
 	err = archive.Parse(archiveSpec)
 	if err != nil {
 		return nil, err
 	}
 	as.Archives = append(as.Archives, archive)
-	return a, nil
+	return archive, nil
 }
 
 func (as *ArchiveSet) ArchiveAddAll(archiveSpecs []string, pathSuffix string) error {

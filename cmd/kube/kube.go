@@ -407,8 +407,6 @@ func (c *KubeClient) FileRead(src *FileSpec, dst io.WriteCloser, pod *corev1.Pod
 	srcFile := shellescape.Quote(src.Path)
 	cmdArr := []string{"env", "cat", srcFile}
 
-	defer dst.Close()
-
 	stdoutReader, stderrReader, err := c.Exec(pod, containerName, cmdArr, nil)
 	if err != nil {
 		return err
@@ -419,6 +417,7 @@ func (c *KubeClient) FileRead(src *FileSpec, dst io.WriteCloser, pod *corev1.Pod
 	// read stdout
 	eg.Go(func() error {
 		_, err = io.Copy(dst, stdoutReader)
+		dst.Close()
 		return err
 	})
 

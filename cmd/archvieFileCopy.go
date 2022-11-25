@@ -137,9 +137,9 @@ func ArchiveFileCopy(v *viper.Viper, srcArchiveFile, dstArchiveFile *schema.Arch
 			return err
 		}
 
-		defer f.Close()
 		eg.Go(func() error {
 			_, err := io.Copy(srcWriter, f)
+			f.Close()
 			return err
 		})
 	}
@@ -170,6 +170,9 @@ func ArchiveFileCopy(v *viper.Viper, srcArchiveFile, dstArchiveFile *schema.Arch
 		for {
 			n, err := progressPipeReader.Read(discardBuffer)
 			if err != nil {
+				if err == io.EOF {
+					return nil
+				}
 				return err
 			}
 			progressUpdater(int64(n))
@@ -221,15 +224,15 @@ func ArchiveFileCopy(v *viper.Viper, srcArchiveFile, dstArchiveFile *schema.Arch
 		// read into the local file
 		eg.Go(func() error {
 			_, err := io.Copy(dstFile, dstPipeReader)
-			if err == nil {
+			if err != nil {
 				return fmt.Errorf("copy error from dstPipeReader to dstFile: %v", err)
 			}
 			err = dstFile.Sync()
-			if err == nil {
+			if err != nil {
 				return fmt.Errorf("sync error for dstFile: %v", err)
 			}
 			err = dstFile.Close()
-			if err == nil {
+			if err != nil {
 				return fmt.Errorf("close error for dstFile: %v", err)
 			}
 			return err
