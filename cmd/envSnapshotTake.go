@@ -2,65 +2,16 @@ package main
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/jkassis/jerrie/core"
 	"github.com/jkassis/jerriedr/cmd/kube"
 	"github.com/jkassis/jerriedr/cmd/schema"
-	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"golang.org/x/sync/errgroup"
 )
 
-func init() {
-	v := viper.New()
-
-	c := &cobra.Command{
-		Use:   "servicesnapshottake",
-		Short: "Trigger a remote service to take a snapshot.",
-		Long:  ``,
-		Run: func(cmd *cobra.Command, args []string) {
-			CMDServiceSnapshotTake(v)
-		},
-	}
-
-	// flag configuration
-	FlagsAddKubeFlags(c, v)
-	FlagsAddServiceFlag(c, v)
-	FlagsAddProtocolFlag(c, v)
-	FlagsAddAPIVersionFlag(c, v)
-
-	MAIN.AddCommand(c)
-}
-
-func CMDServiceSnapshotTake(v *viper.Viper) {
-	start := time.Now()
-	core.Log.Warnf("CMDServiceSnapshotTake: starting")
-
-	// get services from serviceSpecs
-	serviceSpecs := v.GetStringSlice(FLAG_SERVICE)
-	if len(serviceSpecs) == 0 {
-		core.Log.Fatalf("no services specified")
-	}
-
-	services := make([]*schema.Service, 0)
-	for _, serviceSpec := range serviceSpecs {
-		service := &schema.Service{}
-		if err := service.Parse(serviceSpec); err != nil {
-			core.Log.Fatalf("could not parse serviceSpec %s", serviceSpec)
-		}
-
-		services = append(services, service)
-	}
-
-	ServiceSnapshotTake(v, services)
-
-	duration := time.Since(start)
-	core.Log.Warnf("CMDServiceSnapshotTake: took %s", duration.String())
-}
-
-func ServiceSnapshotTake(v *viper.Viper, services []*schema.Service) (err error) {
+func EnvSnapshotTake(v *viper.Viper, services []*schema.Service) (err error) {
 	// establish an errgroup
 	eg := errgroup.Group{}
 

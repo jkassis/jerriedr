@@ -56,7 +56,7 @@ func EnvRestore(v *viper.Viper, srcArchiveSpecs, dstArchiveSpecs, dstServiceSpec
 			}
 		}
 		if !hasFiles {
-			core.Log.Fatalf("found no snapshots in %v", localProdArchiveSpecs)
+			core.Log.Fatalf("found no snapshots in %v", prodRepoArchiveSpecs)
 		}
 
 		picker := ArchiveFileSetPickerNew()

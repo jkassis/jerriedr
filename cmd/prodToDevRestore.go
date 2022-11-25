@@ -15,7 +15,7 @@ func init() {
 		Short: "Clear and load a dev service from a snapshot of prod services within a prod archive.",
 		Long:  "Clear a dev monoservice and load data from an archive containing a snapshot of prod microservices.",
 		Run: func(cmd *cobra.Command, args []string) {
-			CMDDevServiceRestoreFromProd(v)
+			CMDProdToDevRestore(v)
 		},
 	}
 
@@ -23,9 +23,9 @@ func init() {
 	MAIN.AddCommand(c)
 }
 
-func CMDDevServiceRestoreFromProd(v *viper.Viper) {
-	dstArchiveSpecs := devFromProdArchiveSpecs
-	dstServiceSpecs := devFromProdServiceSpecs
-	srcArchiveSpecs := localProdArchiveSpecs
+func CMDProdToDevRestore(v *viper.Viper) {
+	dstArchiveSpecs := prodToDevArchiveSpecs
+	dstServiceSpecs := prodToDevServiceSpecs
+	srcArchiveSpecs := prodToDevRepoArchiveSpecs
 	EnvRestore(v, srcArchiveSpecs, dstArchiveSpecs, dstServiceSpecs)
 }
