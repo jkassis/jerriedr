@@ -9,6 +9,7 @@ var prodServiceSpecs []string = []string{
 	"statefulset|fg/keevie|10000",
 	"statefulset|fg/permie|10000",
 }
+
 var prodArchiveSpecs []string = []string{
 	"statefulset|fg/dockie|/var/data/single/<pod>-server-0/backup",
 	"statefulset|fg/ledgie|/var/data/single/<pod>-server-0/backup",
@@ -18,7 +19,7 @@ var prodArchiveSpecs []string = []string{
 	"statefulset|fg/permie|/var/data/single/<pod>-server-0/backup",
 }
 
-// conf for local storage for prodarchives
+// conf for local storage for prodArchive
 var localProdArchiveSpec string = "local|/var/jerrie/archive/prod"
 var localProdServiceArchiveSpecs []string = []string{
 	"local|/var/jerrie/archive/prod/dockie",

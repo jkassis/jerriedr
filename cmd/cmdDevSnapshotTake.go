@@ -41,7 +41,6 @@ func CMDDevSnapshotTake(v *viper.Viper) {
 		if err := service.Parse(serviceSpec); err != nil {
 			core.Log.Fatalf("could not parse serviceSpec %s", serviceSpec)
 		}
-
 		services = append(services, service)
 	}
 

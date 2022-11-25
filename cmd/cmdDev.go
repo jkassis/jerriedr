@@ -14,19 +14,8 @@ var devArchiveSpecs []string = []string{
 }
 var devServiceRestoreFolder string = "/var/multi/single/local-server-0/restore"
 
-// conf for local storage of dev archives
+// conf for local storage of devArchive
 var localDevArchiveSpec string = "local|/var/jerrie/archive/dev"
 var localDevServiceArchiveSpecs []string = []string{
 	"local|/var/jerrie/archive/dev/multi",
-}
-
-// storage for prod archives
-var localProdArchiveSpec string = "local|/var/jerrie/archive/prod"
-var localProdServiceArchiveSpecs []string = []string{
-	"local|/var/jerrie/archive/prod/dockie",
-	"local|/var/jerrie/archive/prod/dubbie",
-	"local|/var/jerrie/archive/prod/keevie",
-	"local|/var/jerrie/archive/prod/ledgie",
-	"local|/var/jerrie/archive/prod/permie",
-	"local|/var/jerrie/archive/prod/tickie",
 }
