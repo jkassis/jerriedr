@@ -96,14 +96,14 @@ func ArchiveFileCopy(v *viper.Viper, srcArchiveFile, dstArchiveFile *schema.Arch
 			return fmt.Errorf("could not get pod: %v", err)
 		}
 
-		dstFileFullPath = srcArchiveFile.Archive.Path + "/" + srcArchiveFile.Name
-
 		// get the file size
+		srcFileFullPath := srcArchiveFile.Archive.Path + "/" + srcArchiveFile.Name
 		fileStats, err := kubeClient.FileStatGet(pod, srcArchiveFile.Archive.KubeContainer, dstFileFullPath)
 		if err != nil {
 			return fmt.Errorf("could not get stats for %s: %v", dstFileFullPath, err)
 		}
 		dstFileSize = fileStats.Size
+		dstFileFullPath = srcFileFullPath
 
 		// read to the pipe writer
 		eg.Go(func() error {
@@ -123,23 +123,24 @@ func ArchiveFileCopy(v *viper.Viper, srcArchiveFile, dstArchiveFile *schema.Arch
 			return srcWriter.Close()
 		})
 	} else if srcArchiveFile.Archive.IsLocal() {
-		dstFileFullPath = srcArchiveFile.Archive.Path + "/" + srcArchiveFile.Name
+		srcFileFullPath := srcArchiveFile.Archive.Path + "/" + srcArchiveFile.Name
 
 		// get the file size
-		fileInfo, err := os.Stat(dstFileFullPath)
+		fileInfo, err := os.Stat(srcFileFullPath)
 		if err != nil {
-			return fmt.Errorf("could not get stats for %s: %v", dstFileFullPath, err)
+			return fmt.Errorf("could not get stats for %s: %v", srcFileFullPath, err)
 		}
 		dstFileSize = fileInfo.Size()
+		dstFileFullPath = dstArchiveFile.Archive.Path + "/" + srcArchiveFile.Name
 
-		f, err := os.Open(dstFileFullPath)
+		srcFile, err := os.Open(srcFileFullPath)
 		if err != nil {
 			return err
 		}
 
 		eg.Go(func() error {
-			_, err := io.Copy(srcWriter, f)
-			f.Close()
+			_, err := io.Copy(srcWriter, srcFile)
+			srcWriter.Close()
 			return err
 		})
 	}
