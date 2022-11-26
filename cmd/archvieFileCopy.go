@@ -75,13 +75,13 @@ func ArchiveFileCopy(v *viper.Viper, srcArchiveFile, dstArchiveFile *schema.Arch
 	// make an eg
 	eg := &errgroup.Group{}
 
-	// make a pipe
-	srcReader, srcWriter := io.Pipe()
-	var progressUpdater func(progress int64)
+	// make a splitter
+	progressPipeReader, progressPipeWriter := io.Pipe()
+	dstPipeReader, dstPipeWriter := io.Pipe()
+	splitWriter := io.MultiWriter(dstPipeWriter, progressPipeWriter)
 
-	// read from the src to the pipe
-	var dstFileSize int64
-	var dstFileFullPath string
+	// read from the src to the splitter
+	var srcFileSize int64
 	if srcArchiveFile.Archive.IsStatefulSet() {
 		return fmt.Errorf("cannot copy to/from statefulset archiveFile")
 	} else if srcArchiveFile.Archive.IsPod() {
@@ -98,29 +98,34 @@ func ArchiveFileCopy(v *viper.Viper, srcArchiveFile, dstArchiveFile *schema.Arch
 
 		// get the file size
 		srcFileFullPath := srcArchiveFile.Archive.Path + "/" + srcArchiveFile.Name
-		fileStats, err := kubeClient.FileStatGet(pod, srcArchiveFile.Archive.KubeContainer, dstFileFullPath)
+		fileStats, err := kubeClient.FileStatGet(pod, srcArchiveFile.Archive.KubeContainer, srcFileFullPath)
 		if err != nil {
-			return fmt.Errorf("could not get stats for %s: %v", dstFileFullPath, err)
+			return fmt.Errorf("could not get stats for %s: %v", srcFileFullPath, err)
 		}
-		dstFileSize = fileStats.Size
-		dstFileFullPath = srcFileFullPath
+		srcFileSize = fileStats.Size
 
-		// read to the pipe writer
+		// read to the splitter
 		eg.Go(func() error {
 			err := kubeClient.FileRead(
 				&kube.FileSpec{
 					PodNamespace: srcArchiveFile.Archive.KubeNamespace,
 					PodName:      srcArchiveFile.Archive.KubeName,
-					Path:         dstFileFullPath,
+					Path:         srcFileFullPath,
 				},
-				srcWriter,
+				splitWriter,
 				pod,
 				srcArchiveFile.Archive.KubeContainer,
 			)
 			if err != nil {
-				return err
+				return fmt.Errorf("trouble with file read while copying file from kube: %v", err)
 			}
-			return srcWriter.Close()
+			if err := progressPipeWriter.Close(); err != nil {
+				return fmt.Errorf("could not close progressPipeWriter: %v", err)
+			}
+			if err := dstPipeWriter.Close(); err != nil {
+				return fmt.Errorf("could not close dstPipeWriter: %v", err)
+			}
+			return nil
 		})
 	} else if srcArchiveFile.Archive.IsLocal() {
 		srcFileFullPath := srcArchiveFile.Archive.Path + "/" + srcArchiveFile.Name
@@ -130,53 +135,35 @@ func ArchiveFileCopy(v *viper.Viper, srcArchiveFile, dstArchiveFile *schema.Arch
 		if err != nil {
 			return fmt.Errorf("could not get stats for %s: %v", srcFileFullPath, err)
 		}
-		dstFileSize = fileInfo.Size()
-		dstFileFullPath = dstArchiveFile.Archive.Path + "/" + srcArchiveFile.Name
+		srcFileSize = fileInfo.Size()
 
 		srcFile, err := os.Open(srcFileFullPath)
 		if err != nil {
 			return err
 		}
 
-		eg.Go(func() error {
-			_, err := io.Copy(srcWriter, srcFile)
-			srcWriter.Close()
+		eg.Go(func() (err error) {
+			_, err = io.Copy(splitWriter, srcFile)
 			return err
 		})
 	}
 
-	// read the src into a splitter to send data to the file and the progressUpdater
-	progressUpdater = progressWatcher.AddWatch(&Watch{item: dstFileFullPath, unit: "bytes", total: dstFileSize})
-	progressPipeReader, progressPipeWriter := io.Pipe()
-	dstPipeReader, dstPipeWriter := io.Pipe()
-	splitter := io.MultiWriter(dstPipeWriter, progressPipeWriter)
-	eg.Go(func() error {
-		_, err := io.Copy(splitter, srcReader)
-		if err != nil {
-			return fmt.Errorf("could not complete copy from src to splitter: %v", err)
-		}
-		if err := progressPipeWriter.Close(); err != nil {
-			return fmt.Errorf("could not close progressPipeWriter: %v", err)
-		}
-		if err := dstPipeWriter.Close(); err != nil {
-			return fmt.Errorf("could not close dstPipeWriter: %v", err)
-		}
-		return nil
-	})
-
 	// read the progress into a discard buffer
-	// TODO wish that one could read with coping bytes
+	// TODO wish that one could read without coping bytes
+	var progressUpdater func(progress int64)
+	dstFileFullPath := dstArchiveFile.Archive.Path + "/" + srcArchiveFile.Name
+	progressUpdater = progressWatcher.AddWatch(&Watch{item: dstFileFullPath, unit: "bytes", total: srcFileSize})
 	eg.Go(func() error {
 		discardBuffer := make([]byte, 8192) // seems to be standard size for blackhole
 		for {
 			n, err := progressPipeReader.Read(discardBuffer)
+			progressUpdater(int64(n))
 			if err != nil {
 				if err == io.EOF {
 					return nil
 				}
 				return err
 			}
-			progressUpdater(int64(n))
 		}
 	})
 
@@ -228,6 +215,7 @@ func ArchiveFileCopy(v *viper.Viper, srcArchiveFile, dstArchiveFile *schema.Arch
 			if err != nil {
 				return fmt.Errorf("copy error from dstPipeReader to dstFile: %v", err)
 			}
+
 			err = dstFile.Sync()
 			if err != nil {
 				return fmt.Errorf("sync error for dstFile: %v", err)

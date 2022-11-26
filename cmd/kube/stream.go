@@ -3,7 +3,6 @@ package kube
 import (
 	"bufio"
 	"io"
-	"io/ioutil"
 	"sync"
 
 	"github.com/sirupsen/logrus"
@@ -41,7 +40,7 @@ func ReadAll(readers ...io.Reader) (results [][]byte, err error) {
 		eg.Go(func() error {
 			var err error
 			var result []byte
-			result, err = ioutil.ReadAll(r)
+			result, err = io.ReadAll(r)
 			if err != nil {
 				return err
 			}

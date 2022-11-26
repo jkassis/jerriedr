@@ -218,12 +218,13 @@ func (c *KubeClient) Exec(
 	pod *corev1.Pod,
 	containerName string,
 	command []string,
-	stdinReader io.Reader) (io.Reader, io.Reader, error) {
-	stdoutReader, stdoutWriter := io.Pipe()
+	stdinReader io.Reader,
+	stdoutWriter io.Writer) error {
 	stderrReader, stderrWriter := io.Pipe()
 
 	request := c.Clientset.CoreV1().RESTClient().
-		Post().
+		// Post().
+		Get().
 		Resource("pods").
 		Namespace(pod.Namespace).
 		Name(pod.Name).
@@ -239,70 +240,68 @@ func (c *KubeClient) Exec(
 
 	exec, err := remotecommand.NewSPDYExecutor(c.Config, "POST", request.URL())
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 
-	go func() {
-		_ = exec.Stream(remotecommand.StreamOptions{
+	eg := errgroup.Group{}
+	eg.Go(func() error {
+		var err error
+		err = exec.Stream(remotecommand.StreamOptions{
 			Stdin:  stdinReader,
 			Stdout: stdoutWriter,
 			Stderr: stderrWriter,
 			Tty:    false,
 		})
-		stdoutWriter.Close()
-		stderrWriter.Close()
-	}()
+		if err != nil {
+			core.Log.Errorf("error while streaming from kube: %v", err)
+		}
+		err = stderrWriter.Close()
+		if err != nil {
+			core.Log.Errorf("trouble closing stdout writer after streaming from kube: %v", err)
+		}
+		return nil
+	})
+
+	// read stderr and convert to err
+	eg.Go(func() error {
+		stderr := bytes.NewBuffer(nil)
+		_, err = io.Copy(stderr, stderrReader)
+		if err != nil {
+			return err
+		}
+		if stderr.Len() > 0 {
+			return fmt.Errorf("kube.Exec: stderr: %v", stderr)
+		}
+		return nil
+	})
 
 	// return stdout, stderr
-	return stdoutReader, stderrReader, nil
+	return eg.Wait()
 }
 
 // ExecSync executes a command synchronously on a given pod
 // stdin is piped to the remote shell if provided or nothing if nil
 // returns the output from stdout or err as a string and err
 func (c *KubeClient) ExecSync(pod *corev1.Pod, containerName string, command []string, stdin io.Reader) (string, error) {
-	stdoutReader, stderrReader, err := c.Exec(pod, containerName, command, stdin)
-	if err != nil {
-		return "", err
-	}
+	stdoutReader, stdoutWriter := io.Pipe()
+	eg := errgroup.Group{}
 
-	results, err := ReadAll(stdoutReader, stderrReader)
-	if err != nil {
-		return "", err
-	}
-	stdout := results[0]
-	stderr := results[1]
-	if len(stderr) > 0 {
-		return string(stdout), errors.New(string(stderr))
-	}
+	eg.Go(func() error {
+		err := c.Exec(pod, containerName, command, stdin, stdoutWriter)
+		if err != nil {
+			return err
+		}
+		return stdoutWriter.Close()
+	})
 
-	return string(stdout), nil
-}
-
-// ExecSyncAndLog executes a command synchronously on a given pod
-// stdin is piped to the remote shell if provided or nothing if nil
-// streams the remote stdout / stderr to local logs and returns error if any are discovered
-func (c *KubeClient) ExecSyncAndLog(pod *corev1.Pod, containerName string, command []string, stdin io.Reader) error {
-	logrus.Info("Running... ", strings.Join(command, " "))
-	stdoutReader, stderrReader, err := c.Exec(pod, "php-fpm", command, nil)
-	if err != nil {
+	var stdout []byte
+	eg.Go(func() (err error) {
+		stdout, err = io.ReadAll(stdoutReader)
 		return err
-	}
-	StreamAllToLog(pod.Name+" : ", stdoutReader, stderrReader)
-	return nil
-}
+	})
 
-// ExecSyncAndLogOnRandomPod executes a command synchronously on a random pod
-// stdin is piped to the remote shell if provided or nothing if nil
-// returns the output from stdout and stderr
-func (c *KubeClient) ExecSyncAndLogOnRandomPod(namespace, deployment, container string, command []string, stdin io.Reader) error {
-	// get a random pod
-	pod, err := c.PodGetRandomByDeploymentName(namespace, deployment)
-	if err != nil {
-		return err
-	}
-
-	return c.ExecSyncAndLog(pod, container, command, stdin)
+	err := eg.Wait()
+	return string(stdout), err
 }
 
 // FileSpec holds a location for a remote or local file
@@ -328,11 +327,11 @@ func (c *KubeClient) DirLs(src *FileSpec, pod *corev1.Pod, containerName string)
 }
 
 // DirMake copies a file from local dir to remote
-func (c *KubeClient) DirMake(src, dest *FileSpec, pod *corev1.Pod, containerName string) (io.Reader, io.Reader, error) {
+func (c *KubeClient) DirMake(src, dest *FileSpec, pod *corev1.Pod, containerName string) (stdout string, err error) {
 	destFile := shellescape.Quote(dest.Path)
 	cmdArr := []string{"/bin/sh", "-c", "mkdir -p " + destFile}
 	logrus.Info("making directory in pod : '" + pod.Name + "'")
-	return c.Exec(pod, containerName, cmdArr, nil)
+	return c.ExecSync(pod, containerName, cmdArr, nil)
 }
 
 // FileWriterGet gets a writer to a file on a pod
@@ -349,43 +348,7 @@ func (c *KubeClient) FileWrite(src io.Reader, dst *FileSpec, pod *corev1.Pod, co
 	dstFile := shellescape.Quote(dst.Path)
 	// cmdArr := []string{"/bin/sh", "-c", "mkdir -p " + filepath.Dir(dstFile) + " ; cat > " + dstFile}
 	cmdArr := []string{"env", "cat", ">", dstFile}
-
-	stdoutReader, stderrReader, err := c.Exec(pod, containerName, cmdArr, src)
-	if err != nil {
-		return err
-	}
-
-	eg := &errgroup.Group{}
-
-	// stream to dst
-	eg.Go(func() error {
-		stdout := bytes.NewBuffer(nil)
-		_, err = io.Copy(stdout, stdoutReader)
-		if err != nil {
-			return err
-		}
-		if stdout.Len() > 0 {
-			return fmt.Errorf("FileWrite: got data from stdout: %v", stdout)
-		}
-
-		return err
-	})
-
-	// stream to err
-	eg.Go(func() error {
-		stderr := bytes.NewBuffer(nil)
-		_, err = io.Copy(stderr, stderrReader)
-		if err != nil {
-			return err
-		}
-		if stderr.Len() > 0 {
-			return fmt.Errorf("FileWrite: got data from stderr: %v", stderr)
-		}
-		return nil
-	})
-
-	err = eg.Wait()
-	return err
+	return c.Exec(pod, containerName, cmdArr, src, io.Discard)
 }
 
 // FileReaderGet gets a reader to a file on a pod
@@ -403,38 +366,10 @@ func (c *KubeClient) FileWrite(src io.Reader, dst *FileSpec, pod *corev1.Pod, co
 //	}()
 //
 // io.Copy(dstFile, reader)
-func (c *KubeClient) FileRead(src *FileSpec, dst io.WriteCloser, pod *corev1.Pod, containerName string) (err error) {
+func (c *KubeClient) FileRead(src *FileSpec, dst io.Writer, pod *corev1.Pod, containerName string) (err error) {
 	srcFile := shellescape.Quote(src.Path)
-	cmdArr := []string{"env", "cat", srcFile}
-
-	stdoutReader, stderrReader, err := c.Exec(pod, containerName, cmdArr, nil)
-	if err != nil {
-		return err
-	}
-
-	eg := &errgroup.Group{}
-
-	// read stdout
-	eg.Go(func() error {
-		_, err = io.Copy(dst, stdoutReader)
-		dst.Close()
-		return err
-	})
-
-	// read stderr and convert to err
-	eg.Go(func() error {
-		stderr := bytes.NewBuffer(nil)
-		_, err = io.Copy(stderr, stderrReader)
-		if err != nil {
-			return err
-		}
-		if stderr.Len() > 0 {
-			return fmt.Errorf("CopyFromPod: got data from stderr: %v", stderr)
-		}
-		return nil
-	})
-
-	return eg.Wait()
+	cmdArr := []string{"cat", srcFile}
+	return c.Exec(pod, containerName, cmdArr, nil, dst)
 }
 
 type FileStat struct {
@@ -479,10 +414,10 @@ func (c *KubeClient) FileStatGet(pod *corev1.Pod, containerName, path string) (f
 }
 
 // FileRm removes a file from a remote
-func (c *KubeClient) FileRm(dst *FileSpec, pod *corev1.Pod, containerName string) (io.Reader, io.Reader, error) {
+func (c *KubeClient) FileRm(dst *FileSpec, pod *corev1.Pod, containerName string) (string, error) {
 	cmdArr := []string{"/bin/sh", "-c", "rm -rf " + dst.Path}
 	fmt.Println(strings.Join(cmdArr, " "))
-	return c.Exec(pod, containerName, cmdArr, nil)
+	return c.ExecSync(pod, containerName, cmdArr, nil)
 }
 
 // tarMake is not used, but reserved for the future
