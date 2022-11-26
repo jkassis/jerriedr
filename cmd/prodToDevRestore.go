@@ -11,7 +11,7 @@ func init() {
 
 	// CLI Command with flag parsing
 	c := &cobra.Command{
-		Use:   "devservicerestorefromprodarch",
+		Use:   "prodtodevrestore",
 		Short: "Clear and load a dev service from a snapshot of prod services within a prod archive.",
 		Long:  "Clear a dev monoservice and load data from an archive containing a snapshot of prod microservices.",
 		Run: func(cmd *cobra.Command, args []string) {

@@ -19,21 +19,21 @@ func EnvRestore(v *viper.Viper, srcArchiveSpecs, dstArchiveSpecs, dstServiceSpec
 	var srcArchiveSet, dstArchiveSet *schema.ArchiveSet
 	var dstServiceSet *schema.ServiceSet
 	{
-		srcArchiveSet := schema.ArchiveSetNew()
+		srcArchiveSet = schema.ArchiveSetNew()
 		err := srcArchiveSet.ArchiveAddAll(srcArchiveSpecs, "")
 		if err != nil {
 			core.Log.Fatalf("could not add srcArchive %v", err)
 		}
 
 		// get dstArchiveSet
-		dstArchiveSet := schema.ArchiveSetNew()
+		dstArchiveSet = schema.ArchiveSetNew()
 		err = dstArchiveSet.ArchiveAddAll(dstArchiveSpecs, "restore")
 		if err != nil {
 			core.Log.Fatalf("could not add dstArchive %v", err)
 		}
 
 		// get dstServices
-		dstServiceSet := schema.ServiceSetNew()
+		dstServiceSet = schema.ServiceSetNew()
 		err = dstServiceSet.ServiceAddAll(dstServiceSpecs)
 		if err != nil {
 			core.Log.Fatalf("could not add dstArchive %v", err)
