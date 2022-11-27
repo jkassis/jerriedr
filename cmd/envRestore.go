@@ -27,7 +27,7 @@ func EnvRestore(v *viper.Viper, srcArchiveSpecs, dstArchiveSpecs, dstServiceSpec
 
 		// get dstArchiveSet
 		dstArchiveSet = schema.ArchiveSetNew()
-		err = dstArchiveSet.ArchiveAddAll(dstArchiveSpecs, "restore")
+		err = dstArchiveSet.ArchiveAddAll(dstArchiveSpecs, "/restore")
 		if err != nil {
 			core.Log.Fatalf("could not add dstArchive %v", err)
 		}
