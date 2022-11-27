@@ -4,6 +4,8 @@ import (
 	"archive/tar"
 	"bytes"
 	"context"
+	"crypto/md5"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -367,9 +369,77 @@ func (c *KubeClient) FileWrite(src io.Reader, dst *FileSpec, pod *corev1.Pod, co
 //
 // io.Copy(dstFile, reader)
 func (c *KubeClient) FileRead(src *FileSpec, dst io.Writer, pod *corev1.Pod, containerName string) (err error) {
-	srcFile := shellescape.Quote(src.Path)
-	cmdArr := []string{"cat", srcFile}
-	return c.Exec(pod, containerName, cmdArr, nil, dst)
+	srcFileFullPath := shellescape.Quote(src.Path)
+	fileStats, err := c.FileStatGet(pod, containerName, srcFileFullPath)
+	if err != nil {
+		return fmt.Errorf("could not get stats for %s: %v", srcFileFullPath, err)
+	}
+	srcFileSize := fileStats.Size
+	srcMD5, err := c.FileMD5Get(pod, containerName, srcFileFullPath)
+	if err != nil {
+		return fmt.Errorf("could not get md5 for %s: %v", srcFileFullPath, err)
+	}
+
+	hasher := md5.New()
+
+	// network file transfers are messy...
+	// we are going to basically do our own rsync protocol here...
+	// if the connection fails due to a premature EOF, we retry.
+	// otherwise, we fail
+	m := int64(0) // count of total bytes transferred
+	buf := make([]byte, 16384)
+
+	for {
+		pipeR, pipeW := io.Pipe()
+
+		// transfer
+		eg := errgroup.Group{}
+		eg.Go(func() (err error) {
+			cmdArr := []string{"tail", "-c", fmt.Sprintf("+%d", m+1), srcFileFullPath}
+			err = c.Exec(pod, containerName, cmdArr, nil, pipeW)
+			pipeErr := pipeW.Close() // always close the pipe
+			if pipeErr != nil {
+				return pipeErr
+			}
+			return err
+		})
+
+		// read from the pipe and forward
+		eg.Go(func() error {
+			for {
+				// read
+				o, err := pipeR.Read(buf)
+				if o > 0 {
+					hasher.Write(buf[:o])
+					dst.Write(buf[:o])
+					m += int64(o)
+				}
+
+				if err != nil {
+					if err == io.EOF {
+						return nil
+					}
+					return err
+				}
+			}
+		})
+
+		// wait
+		err = eg.Wait()
+		if err != nil {
+			return err
+		}
+
+		// did we get all the bytes?
+		if m >= srcFileSize {
+			// yes. compare hashes
+			readHash := hex.EncodeToString(hasher.Sum(nil))
+			if srcMD5 != readHash {
+				return fmt.Errorf("hashes do not match")
+			}
+			return nil // all done
+		}
+	}
 }
 
 type FileStat struct {
@@ -377,6 +447,18 @@ type FileStat struct {
 	GID  int64
 	Size int64
 	Name string
+}
+
+func (c *KubeClient) FileMD5Get(pod *corev1.Pod, containerName, path string) (hash string, err error) {
+	srcFile := shellescape.Quote(path)
+	cmdArr := []string{"env", "md5sum", srcFile}
+	response, err := c.ExecSync(pod, containerName, cmdArr, nil)
+	if err != nil {
+		return "", err
+	}
+
+	parts := strings.Split(response, " ")
+	return parts[0], nil
 }
 
 func (c *KubeClient) FileStatGet(pod *corev1.Pod, containerName, path string) (fileState *FileStat, err error) {
