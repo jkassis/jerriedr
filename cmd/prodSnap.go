@@ -19,7 +19,7 @@ func init() {
 		Short: `Snaps a snapshot of all services in the prod cluster.`,
 		Long:  "Ask all prod services to snap snapshots of their data and save in their local archives. No data is transferred. Can be done without downtime.",
 		Run: func(cmd *cobra.Command, args []string) {
-			CMDProdSnapshotTake(v)
+			CMDProdSnap(v)
 		},
 	}
 
@@ -31,7 +31,7 @@ func init() {
 	MAIN.AddCommand(c)
 }
 
-func CMDProdSnapshotTake(v *viper.Viper) {
+func CMDProdSnap(v *viper.Viper) {
 	start := time.Now()
 	core.Log.Warnf("prodSnapshotTake: starting")
 
@@ -46,7 +46,7 @@ func CMDProdSnapshotTake(v *viper.Viper) {
 		services = append(services, service)
 	}
 
-	err := EnvSnapshotTake(v, services)
+	err := EnvSnap(v, services)
 	if err != nil {
 		core.Log.Fatal("could not complete production snapshot: %v", err)
 	}

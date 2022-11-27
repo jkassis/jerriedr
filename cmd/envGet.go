@@ -10,7 +10,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func EnvSnapshotGet(v *viper.Viper, srcArchiveSpecs, dstArchiveSpecs []string) {
+func EnvGet(v *viper.Viper, srcArchiveSpecs, dstArchiveSpecs []string) {
 	var err error
 
 	kubeClient, _ := KubeClientGet(v)

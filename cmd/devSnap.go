@@ -15,11 +15,11 @@ func init() {
 
 	// CLI Command with flag parsing
 	c := &cobra.Command{
-		Use:   "devsnapshottake",
+		Use:   "devsnap",
 		Short: `Snaps a snapshot of all services in the dev cluster.`,
 		Long:  "Ask all dev services to snap snapshots of their data and save in their local archives. No data is transferred. Can be done without downtime.",
 		Run: func(cmd *cobra.Command, args []string) {
-			CMDDevSnapshotTake(v)
+			CMDDevSnap(v)
 		},
 	}
 
@@ -30,7 +30,7 @@ func init() {
 	MAIN.AddCommand(c)
 }
 
-func CMDDevSnapshotTake(v *viper.Viper) {
+func CMDDevSnap(v *viper.Viper) {
 	start := time.Now()
 	core.Log.Warnf("devSnapshotTake: starting")
 
@@ -44,7 +44,7 @@ func CMDDevSnapshotTake(v *viper.Viper) {
 		services = append(services, service)
 	}
 
-	err := EnvSnapshotTake(v, services)
+	err := EnvSnap(v, services)
 	if err != nil {
 		core.Log.Fatal("could not complete dev snapshot: %v", err)
 	}

@@ -11,7 +11,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func EnvSnapshotTake(v *viper.Viper, services []*schema.Service) (err error) {
+func EnvSnap(v *viper.Viper, services []*schema.Service) (err error) {
 	// establish an errgroup
 	eg := errgroup.Group{}
 

@@ -15,7 +15,7 @@ func init() {
 		Short: "Retrieve a snapshot of cluster services and save to a local archive.",
 		Long:  `This command is a shortcut for servicesnapshotcopy with several presets.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			CMDDevSnapshotGet(v)
+			CMDDevGet(v)
 		},
 	}
 
@@ -23,8 +23,8 @@ func init() {
 	MAIN.AddCommand(c)
 }
 
-func CMDDevSnapshotGet(v *viper.Viper) {
+func CMDDevGet(v *viper.Viper) {
 	srcArchiveSpecs := devArchiveSpecs
 	dstArchiveSpecs := devRepoArchiveSpecs
-	EnvSnapshotGet(v, srcArchiveSpecs, dstArchiveSpecs)
+	EnvGet(v, srcArchiveSpecs, dstArchiveSpecs)
 }

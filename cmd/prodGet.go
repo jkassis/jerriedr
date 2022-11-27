@@ -11,11 +11,11 @@ func init() {
 
 	// CLI Command with flag parsing
 	c := &cobra.Command{
-		Use:   "prodsnapshotget",
+		Use:   "prodget",
 		Short: "Retrieve a snapshot of cluster services and save to a local archive.",
 		Long:  `This command is a shortcut for servicesnapshotcopy with several presets.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			CMDProdSnapshotGet(v)
+			CMDProdGet(v)
 		},
 	}
 
@@ -23,8 +23,8 @@ func init() {
 	MAIN.AddCommand(c)
 }
 
-func CMDProdSnapshotGet(v *viper.Viper) {
+func CMDProdGet(v *viper.Viper) {
 	srcArchiveSpecs := prodArchiveSpecs
 	dstArchiveSpecs := prodRepoArchiveSpecs
-	EnvSnapshotGet(v, srcArchiveSpecs, dstArchiveSpecs)
+	EnvGet(v, srcArchiveSpecs, dstArchiveSpecs)
 }
