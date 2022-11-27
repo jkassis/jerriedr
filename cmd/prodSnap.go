@@ -15,7 +15,7 @@ func init() {
 
 	// CLI Command with flag parsing
 	c := &cobra.Command{
-		Use:   "prodsnapshottake",
+		Use:   "prodsnap",
 		Short: `Snaps a snapshot of all services in the prod cluster.`,
 		Long:  "Ask all prod services to snap snapshots of their data and save in their local archives. No data is transferred. Can be done without downtime.",
 		Run: func(cmd *cobra.Command, args []string) {

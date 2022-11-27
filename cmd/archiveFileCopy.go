@@ -144,7 +144,16 @@ func ArchiveFileCopy(v *viper.Viper, srcArchiveFile, dstArchiveFile *schema.Arch
 
 		eg.Go(func() (err error) {
 			_, err = io.Copy(splitWriter, srcFile)
-			return err
+			if err != nil {
+				return fmt.Errorf("trouble reading local file: %v", err)
+			}
+			if err := progressPipeWriter.Close(); err != nil {
+				return fmt.Errorf("could not close progressPipeWriter: %v", err)
+			}
+			if err := dstPipeWriter.Close(); err != nil {
+				return fmt.Errorf("could not close dstPipeWriter: %v", err)
+			}
+			return nil
 		})
 	}
 
