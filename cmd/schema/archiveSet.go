@@ -48,7 +48,11 @@ func (as *ArchiveSet) ArchiveGetByService(service string) (a *Archive, err error
 		}
 	}
 
-	return nil, fmt.Errorf("could not find archive for service '%s' have only these... %v", service, as.Archives)
+	archiveNames := make([]string, 0)
+	for _, archive := range as.Archives {
+		archiveNames = append(archiveNames, archive.ServiceName)
+	}
+	return nil, fmt.Errorf("could not find archive for service '%s' have only these... %v", service, archiveNames)
 }
 
 func (as *ArchiveSet) FilesFetch(kubeClient *kube.KubeClient) error {

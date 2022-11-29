@@ -16,7 +16,7 @@ func init() {
 
 	// CLI Command with flag parsing
 	c := &cobra.Command{
-		Use:   "raftIndexGet",
+		Use:   "raftindexget",
 		Short: "Get the index of the last processed raft proposal",
 		// Long:  ``,
 		Run: func(cmd *cobra.Command, args []string) {

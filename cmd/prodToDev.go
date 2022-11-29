@@ -11,7 +11,7 @@ var prodToDevServiceSpecs []string = []string{
 }
 
 var prodToDevArchiveSpecs []string = []string{
-	"local|multi|/var/multi/single/local-server-0",
+	"local|dockie|/var/multi/single/local-server-0",
 	"local|dubbie|/var/multi/single/local-server-0",
 	"local|keevie|/var/multi/single/local-server-0",
 	"local|ledgie|/var/multi/single/local-server-0",

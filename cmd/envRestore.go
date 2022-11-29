@@ -96,12 +96,12 @@ func EnvRestore(v *viper.Viper, srcArchiveSpecs, dstArchiveSpecs, dstServiceSpec
 		{
 			dstArchive, err = dstArchiveSet.ArchiveGetByService(srcArchiveFile.Archive.ServiceName)
 			if err != nil {
-				core.Log.Fatalf("cound find dstArchive to match srcArchiveFile '%s': %v", srcArchiveFile.Name, err)
+				core.Log.Fatalf("could not find dstArchive to match srcArchiveFile '%s': %v", srcArchiveFile.Name, err)
 			}
 
 			dstService, err = dstServiceSet.ServiceGetByServiceName(srcArchiveFile.Archive.ServiceName)
 			if err != nil {
-				core.Log.Fatalf("cound find dstService to match srcArchiveFile '%s': %v", srcArchiveFile.Name, err)
+				core.Log.Fatalf("could not find dstService to match srcArchiveFile '%s': %v", srcArchiveFile.Name, err)
 			}
 		}
 
@@ -131,5 +131,8 @@ func EnvRestore(v *viper.Viper, srcArchiveSpecs, dstArchiveSpecs, dstServiceSpec
 				core.Log.Warnf("finished. got this: %s", res)
 			}
 		}
+
 	}
+
+	// reset the raft
 }
