@@ -127,7 +127,6 @@ func CMDDBRun(v *viper.Viper) *core.DBBadger {
 	opts = opts.WithSyncWrites(false)
 	opts = opts.WithValueLogLoadingMode(options.FileIO)
 	opts = opts.WithTableLoadingMode(options.FileIO)
-	opts = opts.WithMaxCacheSize(1 << 27)
 	opts = opts.WithNumVersionsToKeep(0)
 	dbBadger := core.NewDBBadger(&opts, core.Log)
 	return dbBadger

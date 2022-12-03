@@ -11,11 +11,11 @@ func init() {
 
 	// CLI Command with flag parsing
 	c := &cobra.Command{
-		Use:   "devrestore",
+		Use:   "devbackuprestoretodev",
 		Short: "Clear and load a dev service from a snapshot of prod services within a prod archive.",
 		Long:  "Clear a dev monoservice and load data from an archive containing a snapshot of prod microservices.",
 		Run: func(cmd *cobra.Command, args []string) {
-			CMDDevRestore(v)
+			CMDDevBackupRestoreToDev(v)
 		},
 	}
 
@@ -23,9 +23,9 @@ func init() {
 	MAIN.AddCommand(c)
 }
 
-func CMDDevRestore(v *viper.Viper) {
+func CMDDevBackupRestoreToDev(v *viper.Viper) {
 	dstArchiveSpecs := devArchiveSpecs
 	dstServiceSpecs := devServiceSpecs
-	srcArchiveSpecs := devRepoArchiveSpecs
+	srcArchiveSpecs := devBackupArchiveSpecs
 	EnvRestore(v, srcArchiveSpecs, dstArchiveSpecs, dstServiceSpecs)
 }

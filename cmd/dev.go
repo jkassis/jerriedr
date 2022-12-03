@@ -9,6 +9,6 @@ var devArchiveSpecs []string = []string{
 }
 
 // conf for local storage of devArchive
-var devRepoArchiveSpecs []string = []string{
+var devBackupArchiveSpecs []string = []string{
 	"local|multi|/var/jerrie/archive/dev/multi",
 }

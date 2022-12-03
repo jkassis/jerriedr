@@ -56,7 +56,7 @@ func EnvRestore(v *viper.Viper, srcArchiveSpecs, dstArchiveSpecs, dstServiceSpec
 			}
 		}
 		if !hasFiles {
-			core.Log.Fatalf("found no snapshots in %v", prodRepoArchiveSpecs)
+			core.Log.Fatalf("found no snapshots in %v", prodBackupArchiveSpecs)
 		}
 
 		picker := ArchiveFileSetPickerNew()
@@ -69,7 +69,7 @@ func EnvRestore(v *viper.Viper, srcArchiveSpecs, dstArchiveSpecs, dstServiceSpec
 		}
 	}
 
-	// serviceReset resets a service, but only once per run
+	// serviceReset resets a service, but only once
 	servicesReset := make(map[string]bool)
 	serviceReset := func(service *schema.Service) {
 		if servicesReset[service.KubeName] {
@@ -77,16 +77,17 @@ func EnvRestore(v *viper.Viper, srcArchiveSpecs, dstArchiveSpecs, dstServiceSpec
 		}
 		servicesReset[service.KubeName] = true
 
-		reqURL := fmt.Sprintf("http://%s:%d/v1/Reset", service.Host, service.Port)
-		reqBod := fmt.Sprintf(`{ "UUID": "%s", "Fn": "/v1/Reset", "Body": {} }`, uuid.NewString())
+		reqURL := fmt.Sprintf("http://%s:%d/v1/Reset/App", service.Host, service.Port)
+		core.Log.Warnf("trying: %s", reqURL)
+		reqBod := fmt.Sprintf(`{ "UUID": "%s", "Fn": "/v1/Reset/App", "Body": {} }`, uuid.NewString())
 		if res, err := HTTPPost(reqURL, "application/json", reqBod); err != nil {
-			core.Log.Fatalf("reset dev service error: %s: %v", reqURL, err)
+			core.Log.Fatalf("%s: %s: %v", reqURL, res, err)
 		} else {
-			core.Log.Warnf("reset dev service success: %s", res)
+			core.Log.Warnf("%s: %s", reqURL, res)
 		}
 	}
 
-	// restore one archive at a time
+	// one archive at a time...
 	for _, srcArchiveFile := range srcArchiveFileSet.ArchiveFiles {
 		// get the dstArchive and dstService
 		var (
@@ -113,26 +114,56 @@ func EnvRestore(v *viper.Viper, srcArchiveSpecs, dstArchiveSpecs, dstServiceSpec
 			}
 		}
 
+		// reset the service
+		serviceReset(dstService) // resets once per service
+
 		// run the restore endpoint
 		{
-			serviceReset(dstService) // resets once per service
 			core.Log.Warnf("restoring %s", srcArchiveFile.Path())
 			reqURL := fmt.Sprintf(
-				"http://%s:%d/%s",
+				"http://%s:%d%s",
 				dstService.Host,
 				dstService.Port,
 				dstService.RestoreURL)
+			core.Log.Warnf("trying: %s", reqURL)
 			reqBod := fmt.Sprintf(
 				`{ "UUID": "%s", "Fn": "/v1/Restore", "Body": {} }`,
 				uuid.NewString())
 			if res, err := HTTPPost(reqURL, "application/json", reqBod); err != nil {
-				core.Log.Fatalf("could not restore with %s: %v", reqURL, err)
+				core.Log.Fatalf("%s: %s: %v", reqURL, res, err)
 			} else {
-				core.Log.Warnf("finished. got this: %s", res)
+				core.Log.Warnf("%s: %s", reqURL, res)
 			}
 		}
-
 	}
 
-	// reset the raft
+	// raftReset resets a service, but only once
+	raftsReset := make(map[string]bool)
+	raftReset := func(service *schema.Service) {
+		if raftsReset[service.KubeName] {
+			return
+		}
+		raftsReset[service.KubeName] = true
+
+		reqURL := fmt.Sprintf("http://%s:%d/v1/Reset/Raft", service.Host, service.Port)
+		reqBod := fmt.Sprintf(`{ "UUID": "%s", "Fn": "/v1/Reset/Raft", "Body": {} }`, uuid.NewString())
+		if res, err := HTTPPost(reqURL, "application/json", reqBod); err != nil {
+			core.Log.Fatalf("%s: %s: %v", reqURL, res, err)
+		} else {
+			core.Log.Warnf("%s: %s", reqURL, res)
+		}
+	}
+
+	// one archive at a time...
+	for _, srcArchiveFile := range srcArchiveFileSet.ArchiveFiles {
+		// get the dstService
+		var dstService *schema.Service
+		dstService, err = dstServiceSet.ServiceGetByServiceName(srcArchiveFile.Archive.ServiceName)
+		if err != nil {
+			core.Log.Fatalf("could not find dstService to match srcArchiveFile '%s': %v", srcArchiveFile.Name, err)
+		}
+
+		// reset the raft
+		raftReset(dstService) // resets once per service
+	}
 }

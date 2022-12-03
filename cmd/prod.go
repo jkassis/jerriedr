@@ -20,7 +20,7 @@ var prodArchiveSpecs []string = []string{
 }
 
 // conf for local storage for prodArchive
-var prodRepoArchiveSpecs []string = []string{
+var prodBackupArchiveSpecs []string = []string{
 	"local|dockie|/var/jerrie/archive/prod/dockie",
 	"local|dubbie|/var/jerrie/archive/prod/dubbie",
 	"local|keevie|/var/jerrie/archive/prod/keevie",

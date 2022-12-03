@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -9,39 +10,67 @@ import (
 
 func HTTPPost(reqURL, contentType, body string) (resBodyString string, err error) {
 	// make the request
-	res, err := http.Post(reqURL, contentType, strings.NewReader(body))
-	if err != nil {
-		return "", err
+	var req *http.Request
+	{
+		req, err = http.NewRequestWithContext(context.Background(), "POST", reqURL, strings.NewReader(body))
+		if err != nil {
+			return "", fmt.Errorf("HttpPost: could not create request: %v", err)
+		}
+		req.Close = true
+		req.Header.Set("Content-Type", "application/json")
 	}
-	defer res.Body.Close()
 
-	resBody, err := io.ReadAll(res.Body)
-	if err != nil {
-		return "", fmt.Errorf("error while reading res.Body from POST: %s: %v", reqURL, err)
-	}
+	var resBody []byte
+	{
+		var res *http.Response
+		res, err = http.DefaultClient.Do(req)
+		if err != nil {
+			return "", fmt.Errorf("http.Post error: %v", err)
+		}
+		defer res.Body.Close()
 
-	if res.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("POST to %s: %d [%s]: %s", reqURL, res.StatusCode, res.Status, resBody)
+		resBody, err = io.ReadAll(res.Body)
+		if err != nil {
+			return "", fmt.Errorf("error while reading res.Body from POST: %s: %v", reqURL, err)
+		}
+
+		if res.StatusCode != http.StatusOK {
+			return "", fmt.Errorf("POST to %s: %d [%s]: %s", reqURL, res.StatusCode, res.Status, resBody)
+		}
 	}
 
 	return string(resBody), nil
 }
 
-func HTTPGet(reqURL string) (resBodyString string, err error) {
+func HTTPGet(reqURL, contentType string) (resBodyString string, err error) {
 	// make the request
-	res, err := http.Get(reqURL)
-	if err != nil {
-		return "", err
+	var req *http.Request
+	{
+		req, err = http.NewRequestWithContext(context.Background(), "GET", reqURL, nil)
+		if err != nil {
+			return "", fmt.Errorf("HTTPGet: could not create request: %v", err)
+		}
+		req.Close = true
+		req.Header.Set("Content-Type", "application/json")
 	}
-	defer res.Body.Close()
 
-	resBody, err := io.ReadAll(res.Body)
-	if err != nil {
-		return "", fmt.Errorf("error while reading res.Body from GET: %s: %v", reqURL, err)
-	}
+	var resBody []byte
+	{
+		var res *http.Response
+		res, err = http.DefaultClient.Do(req)
+		if err != nil {
+			return "", fmt.Errorf("http.Get error: %v", err)
+		}
+		defer res.Body.Close()
 
-	if res.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("GET  %s: %d [%s]: %s", reqURL, res.StatusCode, res.Status, resBody)
+		resBody, err = io.ReadAll(res.Body)
+		if err != nil {
+			return "", fmt.Errorf("error while reading res.Body from GET: %s: %v", reqURL, err)
+		}
+
+		if res.StatusCode != http.StatusOK {
+			return "", fmt.Errorf("GET to %s: %d [%s]: %s", reqURL, res.StatusCode, res.Status, resBody)
+		}
 	}
 
 	return string(resBody), nil
