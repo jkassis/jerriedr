@@ -1,7 +1,7 @@
 package main
 
 var devServiceSpecs []string = []string{
-	"local|multi|10001|/v1/Backup|/v1/Restore/Dockie",
+	"local|multi|10001|/v1/Backup|/v1/Restore/Dockie|/var/multi/single/local-server-0",
 }
 
 var devSnapArchiveSpecs []string = []string{

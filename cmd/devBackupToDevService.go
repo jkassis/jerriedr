@@ -25,7 +25,6 @@ func init() {
 
 func CMDDevBackupToDevService(v *viper.Viper) {
 	srcArchiveSpecs := devBackupArchiveSpecs
-	dstArchiveSpecs := devSnapArchiveSpecs
 	dstServiceSpecs := devServiceSpecs
-	EnvRestore(v, srcArchiveSpecs, dstArchiveSpecs, dstServiceSpecs)
+	EnvRestore(v, srcArchiveSpecs, dstServiceSpecs)
 }

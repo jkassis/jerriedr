@@ -9,27 +9,20 @@ import (
 	"github.com/spf13/viper"
 )
 
-func EnvRestore(v *viper.Viper, srcArchiveSpecs, dstArchiveSpecs, dstServiceSpecs []string) {
+func EnvRestore(v *viper.Viper, srcArchiveSpecs, dstServiceSpecs []string) {
 	var err error
 
 	// get kube client
 	kubeClient, _ := KubeClientGet(v)
 
 	// get src and dst archiveSets and serviceSets from specs
-	var srcArchiveSet, dstArchiveSet *schema.ArchiveSet
+	var srcArchiveSet *schema.ArchiveSet
 	var dstServiceSet *schema.ServiceSet
 	{
 		srcArchiveSet = schema.ArchiveSetNew()
 		err := srcArchiveSet.ArchiveAddAll(srcArchiveSpecs, "")
 		if err != nil {
 			core.Log.Fatalf("could not add srcArchive %v", err)
-		}
-
-		// get dstArchiveSet
-		dstArchiveSet = schema.ArchiveSetNew()
-		err = dstArchiveSet.ArchiveAddAll(dstArchiveSpecs, "/restore")
-		if err != nil {
-			core.Log.Fatalf("could not add dstArchive %v", err)
 		}
 
 		// get dstServices
@@ -98,12 +91,8 @@ func EnvRestore(v *viper.Viper, srcArchiveSpecs, dstArchiveSpecs, dstServiceSpec
 			dstArchive *schema.Archive
 			dstService *schema.Service
 		)
-		{
-			dstArchive, err = dstArchiveSet.ArchiveGetByService(srcArchiveFile.Archive.ServiceName)
-			if err != nil {
-				core.Log.Fatalf("could not find dstArchive to match srcArchiveFile '%s': %v", srcArchiveFile.Name, err)
-			}
 
+		{
 			dstService, err = dstServiceSet.ServiceGetByServiceName(srcArchiveFile.Archive.ServiceName)
 			if err != nil {
 				core.Log.Fatalf("could not find dstService to match srcArchiveFile '%s': %v", srcArchiveFile.Name, err)
@@ -112,7 +101,7 @@ func EnvRestore(v *viper.Viper, srcArchiveSpecs, dstArchiveSpecs, dstServiceSpec
 
 		// stage the restore file
 		{
-			err = dstArchive.Stage(kubeClient, srcArchiveFile, dstArchive)
+			err = dstService.Stage(kubeClient, srcArchiveFile)
 			if err != nil {
 				core.Log.Fatalf("could not stage %s to %s: %v", srcArchiveFile.Name, dstArchive.Spec, err)
 			}

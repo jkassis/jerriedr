@@ -293,48 +293,6 @@ func (a *Archive) FilesFetch(kubeClient *kube.KubeClient) error {
 	return nil
 }
 
-func (a *Archive) Stage(kubeClient *kube.KubeClient,
-	srcArchiveFile *ArchiveFile,
-	dstArchive *Archive) error {
-	if a.IsStatefulSet() {
-		if kubeClient == nil {
-			return fmt.Errorf("must have kubeClient")
-		}
-
-		return fmt.Errorf("Archive.Stage not allowed for statefulset archives")
-	} else if a.IsPod() {
-		if kubeClient == nil {
-			return fmt.Errorf("must have kubeClient")
-		}
-
-		return fmt.Errorf("Archive.Stage not allowed for pod archives")
-	} else if a.IsLocal() {
-		// clear the content of the restore folder
-		if err := os.RemoveAll(a.Path); err != nil {
-			core.Log.Fatalf("cound not clear the content of the restore folder: %v", err)
-		}
-
-		// recreate it
-		if err := os.MkdirAll(a.Path, 0774); err != nil {
-			core.Log.Fatalf("cound not create the restore folder: %v", err)
-		}
-
-		// can only do local to local
-		if srcArchiveFile.Archive.Scheme != "local" {
-			return fmt.Errorf("can only restore to local from local. srcArchive is %v", srcArchiveFile.Archive)
-		}
-
-		// make a symlink
-		srcArchiveFilePath := srcArchiveFile.Archive.Path + "/" + srcArchiveFile.Name
-		dstArchiveFilePath := dstArchive.Path + "/" + srcArchiveFile.Name
-		err := os.Symlink(srcArchiveFilePath, dstArchiveFilePath)
-		if err != nil {
-			core.Log.Fatalf("cound not create symlink: src %s to %s: %v", srcArchiveFilePath, dstArchiveFilePath, err)
-		}
-	}
-	return nil
-}
-
 func (a *Archive) FilterAdd(tf *TimeFilter) {
 	a.Filters = append(a.Filters, tf)
 }
