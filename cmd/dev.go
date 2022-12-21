@@ -4,7 +4,7 @@ var devServiceSpecs []string = []string{
 	"local|multi|10001|/v1/Backup|/v1/Restore/Dockie",
 }
 
-var devArchiveSpecs []string = []string{
+var devSnapArchiveSpecs []string = []string{
 	"local|multi|/var/multi/single/local-server-0",
 }
 

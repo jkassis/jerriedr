@@ -10,7 +10,9 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func EnvGet(v *viper.Viper, srcArchiveSpecs, dstArchiveSpecs []string) {
+// EnvCopy gets a list of source snapshots, prompts the user
+// to select one and copies the snapshot to the destination env.
+func EnvCopy(v *viper.Viper, srcArchiveSpecs, dstArchiveSpecs []string) {
 	var err error
 
 	kubeClient, _ := KubeClientGet(v)

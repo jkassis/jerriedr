@@ -15,11 +15,11 @@ func init() {
 
 	// CLI Command with flag parsing
 	c := &cobra.Command{
-		Use:   "devsnap",
-		Short: `Snaps a snapshot of all services in the dev cluster.`,
-		Long:  "Ask all dev services to snap snapshots of their data and save in their local archives. No data is transferred. Can be done without downtime.",
+		Use:   "devServiceToDevSnap",
+		Short: ``,
+		Long:  "",
 		Run: func(cmd *cobra.Command, args []string) {
-			CMDDevSnap(v)
+			CMDDevServiceToDevSnap(v)
 		},
 	}
 
@@ -30,7 +30,7 @@ func init() {
 	MAIN.AddCommand(c)
 }
 
-func CMDDevSnap(v *viper.Viper) {
+func CMDDevServiceToDevSnap(v *viper.Viper) {
 	start := time.Now()
 	core.Log.Warnf("devSnapshotTake: starting")
 

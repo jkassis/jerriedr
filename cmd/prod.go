@@ -10,7 +10,7 @@ var prodServiceSpecs []string = []string{
 	"statefulset|fg/permie|10000|/v1/Backup|/v1/Restore",
 }
 
-var prodArchiveSpecs []string = []string{
+var prodSnapArchiveSpecs []string = []string{
 	"statefulset|fg/dockie|/var/data/single/<pod>-server-0",
 	"statefulset|fg/ledgie|/var/data/single/<pod>-server-0",
 	"statefulset|fg/tickie|/var/data/single/<pod>-server-0",

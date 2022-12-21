@@ -5,25 +5,70 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "devbackuprestoretodev",
+      "name": "devSnapToDevBackup",
       "type": "go",
       "request": "launch",
       "mode": "debug",
       "program": "${workspaceFolder}/cmd",
       "console": "integratedTerminal",
       "cwd": "${workspaceFolder}",
-      // "args": [ "raftindexget", "--db", "/var/multi/single/local-server-0/data/" ],
-      "args": ["devbackuprestoretodev"],
+      "args": ["devSnapToDevBackup"],
+      "env": {
+        "LOG_LEVEL": "warn"
+      }
+    },
+    {
+      "name": "devServiceToDevSnap",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}/cmd",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "args": ["devServiceToDevSnap"],
+      "env": {
+        "LOG_LEVEL": "warn"
+      }
+    },
+    {
+      "name": "prodBackupToDevService",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}/cmd",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "args": ["prodBackupToDevService"],
       // "args": ["serve"],
-      // "args": ["prodsnapshotget", "--kc", "/Users/jkassis/.kube/config"],
-      // "args": ["devsnapshotget" ],
-      // "args": ["prodtodevrestore"],
-      // "args": ["devrestore"],
-      // "args": ["devsnapshottake"],
       // "args": ["prodsnapshottake", "--kc", "/Users/jkassis/.kube/config"],
-      // "args": ["backupremote", "-d", "/var/multi/single/local-server-0/data"],
-      // "args": ["backuplocal", "-d", "/var/multi/single/local-server-0/data"],
+      // "args": [ "raftindexget", "--db", "/var/multi/single/local-server-0/data/" ],
       // "args": ["raftindexset", "--dbDir=/var/multi/single/local-server-0/data/", "--index=62"],
+      "env": {
+        "LOG_LEVEL": "warn"
+      }
+    },
+    {
+      "name": "prodSnapToProdBackup",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}/cmd",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "args": ["prodSnapToProdBackup", "--kc", "/Users/jkassis/.kube/config"],
+      "env": {
+        "LOG_LEVEL": "warn"
+      }
+    },
+    {
+      "name": "help",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}/cmd",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "args": ["-h"],
       "env": {
         "LOG_LEVEL": "warn"
       }
