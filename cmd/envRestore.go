@@ -15,7 +15,7 @@ func EnvRestore(v *viper.Viper, srcArchiveSpecs, dstArchiveSpecs, dstServiceSpec
 	// get kube client
 	kubeClient, _ := KubeClientGet(v)
 
-	// get src and dst archiveSets and serviceSets
+	// get src and dst archiveSets and serviceSets from specs
 	var srcArchiveSet, dstArchiveSet *schema.ArchiveSet
 	var dstServiceSet *schema.ServiceSet
 	{
@@ -40,7 +40,7 @@ func EnvRestore(v *viper.Viper, srcArchiveSpecs, dstArchiveSpecs, dstServiceSpec
 		}
 	}
 
-	// pick a srcArchiveFileSet (snapshot)
+	// let the user pick a srcArchiveFileSet (snapshot)
 	var srcArchiveFileSet *schema.ArchiveFileSet
 	{
 		err = srcArchiveSet.FilesFetch(nil)
@@ -69,14 +69,18 @@ func EnvRestore(v *viper.Viper, srcArchiveSpecs, dstArchiveSpecs, dstServiceSpec
 		}
 	}
 
-	// serviceReset resets a service, but only once
+	// serviceReset a fn to reset a service, but only once (deduping)
+	// we do this deduping because sometimes we multiplex many
+	// service snapshots / backups into a single service (eg. prod to dev)
 	servicesReset := make(map[string]bool)
 	serviceReset := func(service *schema.Service) {
+		// is the service already reset?
 		if servicesReset[service.KubeName] {
-			return
+			return // yup. don't do it.
 		}
 		servicesReset[service.KubeName] = true
 
+		// make the HTTP request to the reset endpoint
 		reqURL := fmt.Sprintf("http://%s:%d/v1/Reset/App", service.Host, service.Port)
 		core.Log.Warnf("trying: %s", reqURL)
 		reqBod := fmt.Sprintf(`{ "UUID": "%s", "Fn": "/v1/Reset/App", "Body": {} }`, uuid.NewString())
@@ -137,7 +141,8 @@ func EnvRestore(v *viper.Viper, srcArchiveSpecs, dstArchiveSpecs, dstServiceSpec
 		}
 	}
 
-	// raftReset resets a service, but only once
+	// rafReset resets the raft but dedupe this the same way so that
+	// we can restore many to one.
 	raftsReset := make(map[string]bool)
 	raftReset := func(service *schema.Service) {
 		if raftsReset[service.KubeName] {
@@ -154,7 +159,7 @@ func EnvRestore(v *viper.Viper, srcArchiveSpecs, dstArchiveSpecs, dstServiceSpec
 		}
 	}
 
-	// one archive at a time...
+	// finally... reset the raft index of each service. one for each archive.
 	for _, srcArchiveFile := range srcArchiveFileSet.ArchiveFiles {
 		// get the dstService
 		var dstService *schema.Service
