@@ -24,7 +24,7 @@ func init() {
 }
 
 func CMDProdSnapToProdService(v *viper.Viper) {
-	srcArchiveSpecs := prodBackupArchiveSpecs
-	dstServiceSpecs := prodBackupToDevServiceSpecs
+	srcArchiveSpecs := prodSnapArchiveSpecs
+	dstServiceSpecs := prodServiceSpecs
 	EnvRestore(v, srcArchiveSpecs, dstServiceSpecs)
 }

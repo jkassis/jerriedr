@@ -193,24 +193,37 @@ func (a *Archive) PodArchiveGet(replica int) (*Archive, error) {
 	}, nil
 }
 
+func (a *Archive) Replicas(kubeClient *kube.KubeClient) (n int, err error) {
+	if !a.IsStatefulSet() {
+		return 0, fmt.Errorf("iterating requires a statefulset")
+	}
+
+	if kubeClient == nil {
+		return 0, fmt.Errorf("must have kubeClient")
+	}
+
+	// get the statefulSet
+	statefulSet, err := kubeClient.StatefulSetGetByName(a.KubeNamespace, a.KubeName)
+	if err != nil {
+		return 0, fmt.Errorf("could not get statefulset %s: %w", a.KubeName, err)
+	}
+
+	// for each replica...
+	replicas := statefulSet.Spec.Replicas
+	return int(*replicas), nil
+}
+
 func (a *Archive) FilesFetch(kubeClient *kube.KubeClient) error {
 	files := make([]*ArchiveFile, 0)
 
 	if a.IsStatefulSet() {
-		if kubeClient == nil {
-			return fmt.Errorf("must have kubeClient")
-		}
-
-		// get the statefulSet
-		statefulSet, err := kubeClient.StatefulSetGetByName(a.KubeNamespace, a.KubeName)
-		if err != nil {
-			return fmt.Errorf("could not get statefulset %s: %w", a.KubeName, err)
-		}
-
 		// for each replica...
 		eg := errgroup.Group{}
-		replicas := statefulSet.Spec.Replicas
-		for i := 0; i < int(*replicas); i++ {
+		replicas, err := a.Replicas(kubeClient)
+		if err != nil {
+			return err
+		}
+		for i := 0; i < replicas; i++ {
 			i := i
 			eg.Go(func() error {
 				podArchive, err := a.PodArchiveGet(i)
