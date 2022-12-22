@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"strconv"
 	"time"
 
 	"github.com/jkassis/jerrie/core"
@@ -83,7 +84,7 @@ func ArchiveFileCopy(v *viper.Viper, srcArchiveFile, dstArchiveFile *schema.Arch
 	// read from the src to the splitter
 	var srcFileSize int64
 	if srcArchiveFile.Archive.IsStatefulSet() {
-		return fmt.Errorf("cannot copy to/from statefulset archiveFile")
+		return fmt.Errorf("cannot copy from statefulset archiveFile")
 	} else if srcArchiveFile.Archive.IsPod() {
 		// yes. make sure we have a kube client
 		if kubeErr != nil {
@@ -176,10 +177,7 @@ func ArchiveFileCopy(v *viper.Viper, srcArchiveFile, dstArchiveFile *schema.Arch
 		}
 	})
 
-	// setup the dstArchive first
-	if dstArchiveFile.Archive.IsStatefulSet() {
-		return fmt.Errorf("cannot copy to/from statefulset archiveFile")
-	} else if dstArchiveFile.Archive.IsPod() {
+	writeToPod := func(podName string) error {
 		// yes. make sure we have a kube client
 		if kubeErr != nil {
 			return fmt.Errorf("kube client initialization failed: %v", kubeErr)
@@ -197,13 +195,33 @@ func ArchiveFileCopy(v *viper.Viper, srcArchiveFile, dstArchiveFile *schema.Arch
 				dstPipeReader,
 				&kube.FileSpec{
 					PodNamespace: dstArchiveFile.Archive.KubeNamespace,
-					PodName:      dstArchiveFile.Archive.KubeName,
+					PodName:      podName,
 					Path:         dstArchiveFile.Archive.Path + "/" + dstArchiveFile.Name,
 				},
 				pod,
 				srcArchiveFile.Archive.KubeContainer,
 			)
 		})
+		return nil
+	}
+
+	// setup the dstArchive first
+	if dstArchiveFile.Archive.IsStatefulSet() {
+		n, err := dstArchiveFile.Archive.Replicas(kubeClient)
+		if err != nil {
+			return err
+		}
+		for i := 0; i < n; i++ {
+			if err = writeToPod(dstArchiveFile.Archive.KubeName +
+				"-" +
+				strconv.Itoa(i)); err != nil {
+				return err
+			}
+		}
+	} else if dstArchiveFile.Archive.IsPod() {
+		if err = writeToPod(dstArchiveFile.Archive.KubeName); err != nil {
+			return err
+		}
 	} else if dstArchiveFile.Archive.IsLocal() {
 		dstFilePath := dstArchiveFile.Archive.Path + "/" + dstArchiveFile.Name
 		dstDir := path.Dir(dstFilePath)
