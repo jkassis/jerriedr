@@ -40,7 +40,20 @@ func EnvCopy(kubeClient *kube.Client, srcArchiveSpecs, dstArchiveSpecs []string)
 			core.Log.Fatalf("failed to get files for cluster archive set: %v", err)
 		}
 
-		picker := ArchiveFileSetPickerNew().ArchiveSetPut(srcArchiveSet).Run()
+		var hasFiles bool
+		for _, srcArchive := range srcArchiveSet.Archives {
+			if len(srcArchive.Files) > 0 {
+				hasFiles = true
+				break
+			}
+		}
+		if !hasFiles {
+			core.Log.Fatalf("found no snapshots in %v", srcArchiveSpecs)
+		}
+
+		picker := ArchiveFileSetPickerNew().
+			ArchiveSetPut(srcArchiveSet).
+			Run()
 		srcArchiveFileSet = picker.SelectedSnapshotArchiveFileSet
 	}
 	if srcArchiveFileSet == nil {

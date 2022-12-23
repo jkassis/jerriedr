@@ -46,9 +46,9 @@ func EnvRestore(kubeClient *kube.Client, srcArchiveSpecs, dstServiceSpecs []stri
 			core.Log.Fatalf("found no snapshots in %v", srcArchiveSpecs)
 		}
 
-		picker := ArchiveFileSetPickerNew()
-		picker.ArchiveSetPut(srcArchiveSet)
-		picker.Run()
+		picker := ArchiveFileSetPickerNew().
+			ArchiveSetPut(srcArchiveSet).
+			Run()
 		srcArchiveFileSet = picker.SelectedSnapshotArchiveFileSet
 
 		if srcArchiveFileSet == nil {
