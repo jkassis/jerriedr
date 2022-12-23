@@ -63,6 +63,10 @@ func ArchiveFileSetPickerNew() *ArchiveFileSetPicker {
 func (p *ArchiveFileSetPicker) SelectedSnapshotViewRender(row, col int) {
 	selectedCell := p.SnapshotsView.GetCell(row, col)
 	ref := selectedCell.GetReference()
+	if ref == nil {
+		core.Log.Errorf("no snapshots to select")
+		return
+	}
 	archiveFileSet := ref.(*schema.ArchiveFileSet)
 
 	// Update SelectedSnapshotStatusView
