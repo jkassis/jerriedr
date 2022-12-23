@@ -268,13 +268,15 @@ func (a *Service) PodServiceGet(replica int) (*Service, error) {
 	}, nil
 }
 
+// Snap initiates a snapshop / backup of the service.
+// the snap message is posted to the raft, so there is no
+// need to send this to each server in the StatefulSet
 func (a *Service) Snap(kubeClient *kube.KubeClient) (err error) {
 	core.Log.Warnf("running remote backup for %s", a.Spec)
 
 	var reqURL string
 	{
 		if a.IsStatefulSet() {
-			// we can start the snapshot on any one node since
 			b, err := a.PodServiceGet(0)
 			if err != nil {
 				return err
@@ -318,8 +320,11 @@ func (a *Service) Snap(kubeClient *kube.KubeClient) (err error) {
 	return nil
 }
 
+// Reset calls the reset endpoint for the service.
+// The service defines the behavior, but this should basically clean
+// the datasource in preparation for data loading.
 func (a *Service) Reset() error {
-	// TODO handle statefulsets and pods
+	// TODO loop for StatefulSets and handle pods
 
 	// make the HTTP request to the reset endpoint
 	reqURL := fmt.Sprintf("http://%s:%d/v1/Reset/App", a.Host, a.Port)
@@ -334,19 +339,22 @@ func (a *Service) Reset() error {
 	return nil
 }
 
+// Stage prepares a service for restoration. We might stage and restore
+// multiple data files to the service (eg. when we restore prod data to a
+// dev service), so we break this out.
 func (a *Service) Stage(
 	kubeClient *kube.KubeClient,
 	srcArchiveFile *ArchiveFile) error {
 
 	if a.IsStatefulSet() {
-		// TODO handle this
+		// TODO Loop for each service in the StatefulSet
 		if kubeClient == nil {
 			return fmt.Errorf("must have kubeClient")
 		}
 
 		return fmt.Errorf("Archive.Stage not allowed for statefulset archives")
 	} else if a.IsPod() {
-		// TODO handle this
+		// TODO We need this to work for prod restores
 		if kubeClient == nil {
 			return fmt.Errorf("must have kubeClient")
 		}
@@ -379,7 +387,9 @@ func (a *Service) Stage(
 	return nil
 }
 
+// Restore actuates the actual loading of data after staging
 func (a *Service) Restore() error {
+	// TODO handle all cases here, including StatefulSets
 	core.Log.Warnf("restoring %s", a.Name)
 	reqURL := fmt.Sprintf("http://%s:%d%s", a.Host, a.Port, a.RestoreURL)
 	core.Log.Warnf("trying: %s", reqURL)
@@ -392,7 +402,11 @@ func (a *Service) Restore() error {
 
 	return nil
 }
+
+// RAFTReset resets the raft after a restore. This is necessary in
+// The service decides how to do this, ultimately.
 func (a *Service) RAFTReset() error {
+	// TODO Handle all cases here.
 	reqURL := fmt.Sprintf("http://%s:%d/v1/Reset/Raft", a.Host, a.Port)
 	reqBod := fmt.Sprintf(`{ "UUID": "%s", "Fn": "/v1/Reset/Raft", "Body": {} }`, uuid.NewString())
 	if res, err := http.Post(reqURL, "application/json", reqBod); err != nil {
