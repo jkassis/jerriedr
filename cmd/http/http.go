@@ -1,4 +1,4 @@
-package main
+package http
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func HTTPPost(reqURL, contentType, body string) (resBodyString string, err error) {
+func Post(reqURL, contentType, body string) (resBodyString string, err error) {
 	// make the request
 	var req *http.Request
 	{

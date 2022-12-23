@@ -1,9 +1,6 @@
 package main
 
 import (
-	"fmt"
-
-	"github.com/google/uuid"
 	"github.com/jkassis/jerrie/core"
 	"github.com/jkassis/jerriedr/cmd/schema"
 	"github.com/spf13/viper"
@@ -62,27 +59,8 @@ func EnvRestore(v *viper.Viper, srcArchiveSpecs, dstServiceSpecs []string) {
 		}
 	}
 
-	// serviceReset a fn to reset a service, but only once (deduping)
-	// we do this deduping because sometimes we multiplex many
-	// service snapshots / backups into a single service (eg. prod to dev)
+	// servicesReset tracks which services have been reset
 	servicesReset := make(map[string]bool)
-	serviceReset := func(service *schema.Service) {
-		// is the service already reset?
-		if servicesReset[service.KubeName] {
-			return // yup. don't do it.
-		}
-		servicesReset[service.KubeName] = true
-
-		// make the HTTP request to the reset endpoint
-		reqURL := fmt.Sprintf("http://%s:%d/v1/Reset/App", service.Host, service.Port)
-		core.Log.Warnf("trying: %s", reqURL)
-		reqBod := fmt.Sprintf(`{ "UUID": "%s", "Fn": "/v1/Reset/App", "Body": {} }`, uuid.NewString())
-		if res, err := HTTPPost(reqURL, "application/json", reqBod); err != nil {
-			core.Log.Fatalf("%s: %s: %v", reqURL, res, err)
-		} else {
-			core.Log.Warnf("%s: %s", reqURL, res)
-		}
-	}
 
 	// one archive at a time...
 	for _, srcArchiveFile := range srcArchiveFileSet.ArchiveFiles {
@@ -92,72 +70,40 @@ func EnvRestore(v *viper.Viper, srcArchiveSpecs, dstServiceSpecs []string) {
 			dstService *schema.Service
 		)
 
-		{
-			dstService, err = dstServiceSet.ServiceGetByServiceName(srcArchiveFile.Archive.ServiceName)
-			if err != nil {
-				core.Log.Fatalf("could not find dstService to match srcArchiveFile '%s': %v", srcArchiveFile.Name, err)
-			}
+		dstService, err = dstServiceSet.ServiceGetByServiceName(srcArchiveFile.Archive.ServiceName)
+		if err != nil {
+			core.Log.Fatalf("could not find dstService to match srcArchiveFile '%s': %v", srcArchiveFile.Name, err)
 		}
 
-		// stage the restore file
-		{
-			err = dstService.Stage(kubeClient, srcArchiveFile)
-			if err != nil {
-				core.Log.Fatalf("could not stage %s to %s: %v", srcArchiveFile.Name, dstArchive.Spec, err)
-			}
+		err = dstService.Stage(kubeClient, srcArchiveFile)
+		if err != nil {
+			core.Log.Fatalf("could not stage %s to %s: %v", srcArchiveFile.Name, dstArchive.Spec, err)
 		}
 
 		// reset the service
-		serviceReset(dstService) // resets once per service
+		// we do this deduping because sometimes we multiplex many
+		// service snapshots / backups into a single service (eg. prod to dev)
+		if _, ok := servicesReset[dstService.KubeName]; !ok {
+			servicesReset[dstService.KubeName] = true
+			dstService.Reset()
+		}
 
 		// run the restore endpoint
-		{
-			core.Log.Warnf("restoring %s", srcArchiveFile.Path())
-			reqURL := fmt.Sprintf(
-				"http://%s:%d%s",
-				dstService.Host,
-				dstService.Port,
-				dstService.RestoreURL)
-			core.Log.Warnf("trying: %s", reqURL)
-			reqBod := fmt.Sprintf(
-				`{ "UUID": "%s", "Fn": "/v1/Restore", "Body": {} }`,
-				uuid.NewString())
-			if res, err := HTTPPost(reqURL, "application/json", reqBod); err != nil {
-				core.Log.Fatalf("%s: %s: %v", reqURL, res, err)
-			} else {
-				core.Log.Warnf("%s: %s", reqURL, res)
-			}
-		}
-	}
-
-	// rafReset resets the raft but dedupe this the same way so that
-	// we can restore many to one.
-	raftsReset := make(map[string]bool)
-	raftReset := func(service *schema.Service) {
-		if raftsReset[service.KubeName] {
-			return
-		}
-		raftsReset[service.KubeName] = true
-
-		reqURL := fmt.Sprintf("http://%s:%d/v1/Reset/Raft", service.Host, service.Port)
-		reqBod := fmt.Sprintf(`{ "UUID": "%s", "Fn": "/v1/Reset/Raft", "Body": {} }`, uuid.NewString())
-		if res, err := HTTPPost(reqURL, "application/json", reqBod); err != nil {
-			core.Log.Fatalf("%s: %s: %v", reqURL, res, err)
-		} else {
-			core.Log.Warnf("%s: %s", reqURL, res)
-		}
+		dstService.Restore()
 	}
 
 	// finally... reset the raft index of each service. one for each archive.
+	raftsReset := make(map[string]bool)
 	for _, srcArchiveFile := range srcArchiveFileSet.ArchiveFiles {
-		// get the dstService
 		var dstService *schema.Service
 		dstService, err = dstServiceSet.ServiceGetByServiceName(srcArchiveFile.Archive.ServiceName)
 		if err != nil {
 			core.Log.Fatalf("could not find dstService to match srcArchiveFile '%s': %v", srcArchiveFile.Name, err)
 		}
 
-		// reset the raft
-		raftReset(dstService) // resets once per service
+		if _, ok := raftsReset[dstService.Name]; !ok {
+			raftsReset[dstService.Name] = true
+			dstService.RAFTReset()
+		}
 	}
 }

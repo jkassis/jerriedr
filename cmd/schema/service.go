@@ -6,7 +6,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/jkassis/jerrie/core"
+	"github.com/jkassis/jerriedr/cmd/http"
 	"github.com/jkassis/jerriedr/cmd/kube"
 )
 
@@ -266,17 +268,85 @@ func (a *Service) PodServiceGet(replica int) (*Service, error) {
 	}, nil
 }
 
+func (a *Service) Snap(kubeClient *kube.KubeClient) (err error) {
+	core.Log.Warnf("running remote backup for %s", a.Spec)
+
+	var reqURL string
+	{
+		if a.IsStatefulSet() {
+			// we can start the snapshot on any one node since
+			b, err := a.PodServiceGet(0)
+			if err != nil {
+				return err
+			}
+			return b.Snap(kubeClient)
+		} else if a.IsPod() {
+			// yes. make sure we have a kube client
+			if kubeClient != nil {
+				return fmt.Errorf("need kubeClient")
+			}
+
+			// forward a local port
+			forwardedPort, err := kubeClient.PortForward(&kube.PortForwardRequest{
+				LocalPort:    0,
+				PodName:      a.KubeName,
+				PodNamespace: a.KubeNamespace,
+				PodPort:      a.Port,
+			})
+			if err != nil {
+				return fmt.Errorf("could not port forward to kube service %s: %v", a.Spec, err)
+			}
+			localPort := forwardedPort.Local
+			reqURL = fmt.Sprintf("%s://%s:%d/raft/leader/read", "http", "localhost", localPort)
+		} else if a.IsHost() {
+			reqURL = fmt.Sprintf("http://%s:%d/raft/leader/read", a.Host, a.Port)
+		} else if a.IsLocal() {
+			reqURL = fmt.Sprintf("http://localhost:%d/raft/leader/read", a.Port)
+		}
+	}
+
+	// make the request
+	reqBody := fmt.Sprintf(
+		`{ "UUID": "%s", "Fn": "%s", "Body": {} }`,
+		uuid.NewString(), a.BackupURL)
+
+	if res, err := http.Post(reqURL, "application/json", reqBody); err != nil {
+		return fmt.Errorf("could not request %s: %v", reqURL, err)
+	} else {
+		core.Log.Warnf("finished %s: %s", a.KubeName, res)
+	}
+	return nil
+}
+
+func (a *Service) Reset() error {
+	// TODO handle statefulsets and pods
+
+	// make the HTTP request to the reset endpoint
+	reqURL := fmt.Sprintf("http://%s:%d/v1/Reset/App", a.Host, a.Port)
+	core.Log.Warnf("trying: %s", reqURL)
+	reqBod := fmt.Sprintf(`{ "UUID": "%s", "Fn": "/v1/Reset/App", "Body": {} }`, uuid.NewString())
+	if res, err := http.Post(reqURL, "application/json", reqBod); err != nil {
+		core.Log.Fatalf("%s: %s: %v", reqURL, res, err)
+	} else {
+		core.Log.Warnf("%s: %s", reqURL, res)
+	}
+
+	return nil
+}
+
 func (a *Service) Stage(
 	kubeClient *kube.KubeClient,
 	srcArchiveFile *ArchiveFile) error {
 
 	if a.IsStatefulSet() {
+		// TODO handle this
 		if kubeClient == nil {
 			return fmt.Errorf("must have kubeClient")
 		}
 
 		return fmt.Errorf("Archive.Stage not allowed for statefulset archives")
 	} else if a.IsPod() {
+		// TODO handle this
 		if kubeClient == nil {
 			return fmt.Errorf("must have kubeClient")
 		}
@@ -305,6 +375,30 @@ func (a *Service) Stage(
 		if err != nil {
 			core.Log.Fatalf("cound not create symlink: src %s to %s: %v", srcArchiveFilePath, dstArchiveFilePath, err)
 		}
+	}
+	return nil
+}
+
+func (a *Service) Restore() error {
+	core.Log.Warnf("restoring %s", a.Name)
+	reqURL := fmt.Sprintf("http://%s:%d%s", a.Host, a.Port, a.RestoreURL)
+	core.Log.Warnf("trying: %s", reqURL)
+	reqBod := fmt.Sprintf(`{ "UUID": "%s", "Fn": "/v1/Restore", "Body": {} }`, uuid.NewString())
+	if res, err := http.Post(reqURL, "application/json", reqBod); err != nil {
+		core.Log.Fatalf("%s: %s: %v", reqURL, res, err)
+	} else {
+		core.Log.Warnf("%s: %s", reqURL, res)
+	}
+
+	return nil
+}
+func (a *Service) RAFTReset() error {
+	reqURL := fmt.Sprintf("http://%s:%d/v1/Reset/Raft", a.Host, a.Port)
+	reqBod := fmt.Sprintf(`{ "UUID": "%s", "Fn": "/v1/Reset/Raft", "Body": {} }`, uuid.NewString())
+	if res, err := http.Post(reqURL, "application/json", reqBod); err != nil {
+		core.Log.Fatalf("%s: %s: %v", reqURL, res, err)
+	} else {
+		core.Log.Warnf("%s: %s", reqURL, res)
 	}
 	return nil
 }
