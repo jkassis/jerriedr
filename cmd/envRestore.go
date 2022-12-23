@@ -85,11 +85,11 @@ func EnvRestore(v *viper.Viper, srcArchiveSpecs, dstServiceSpecs []string) {
 		// service snapshots / backups into a single service (eg. prod to dev)
 		if _, ok := servicesReset[dstService.KubeName]; !ok {
 			servicesReset[dstService.KubeName] = true
-			dstService.Reset()
+			dstService.Reset(kubeClient)
 		}
 
 		// run the restore endpoint
-		dstService.Restore()
+		dstService.Restore(kubeClient)
 	}
 
 	// finally... reset the raft index of each service. one for each archive.
@@ -103,7 +103,7 @@ func EnvRestore(v *viper.Viper, srcArchiveSpecs, dstServiceSpecs []string) {
 
 		if _, ok := raftsReset[dstService.Name]; !ok {
 			raftsReset[dstService.Name] = true
-			dstService.RAFTReset()
+			dstService.RAFTReset(kubeClient)
 		}
 	}
 }

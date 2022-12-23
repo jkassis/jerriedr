@@ -156,7 +156,9 @@ func (c *KubeClient) StatefulSetGetByName(namespace string, name string) (*v1.St
 }
 
 // PodGetByName returns a pod
-func (c *KubeClient) PodGetByName(namespace, name string) (*corev1.Pod, error) {
+func (c *KubeClient) PodGetByName(
+	namespace,
+	name string) (*corev1.Pod, error) {
 	pod, err := c.Clientset.CoreV1().Pods(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	if k8sErrors.IsNotFound(err) {
 		return nil, fmt.Errorf("pod %s in namespace %s not found", pod, namespace)
@@ -328,24 +330,25 @@ func (c *KubeClient) DirLs(src *FileSpec, pod *corev1.Pod, containerName string)
 	return strings.Split(stdout, "\n"), nil
 }
 
-// DirMake copies a file from local dir to remote
-func (c *KubeClient) DirMake(src, dest *FileSpec, pod *corev1.Pod, containerName string) (stdout string, err error) {
-	destFile := shellescape.Quote(dest.Path)
+// MkDir copies a file from local dir to remote
+func (c *KubeClient) MkDir(src *FileSpec, pod *corev1.Pod, containerName string) (stdout string, err error) {
+	destFile := shellescape.Quote(src.Path)
 	cmdArr := []string{"/bin/sh", "-c", "mkdir -p " + destFile}
 	logrus.Info("making directory in pod : '" + pod.Name + "'")
 	return c.ExecSync(pod, containerName, cmdArr, nil)
 }
 
-// FileWriterGet gets a writer to a file on a pod
-// Use this to open a file and stream to the writer
-// f, err := os.Open(src.File)
-//
-//	if err != nil {
-//		return err
-//	}
-//
-// defer f.Close()
-// io.Copy(dstWriter, srcFile)
+// Ln creates a softlink
+func (c *KubeClient) Ln(src *FileSpec, dst string, pod *corev1.Pod, containerName string) (stdout string, err error) {
+	srcFilePath := shellescape.Quote(src.Path)
+	dstFilePath := shellescape.Quote(dst)
+	cmdArr := []string{"/bin/sh", "-c",
+		fmt.Sprintf("ln -s %s %s", srcFilePath, dstFilePath)}
+	logrus.Info("linking %s to %s in pod %s", srcFilePath, dstFilePath, pod.Name)
+	return c.ExecSync(pod, containerName, cmdArr, nil)
+}
+
+// FileWrite copies content at io.Reader to a file on a pod
 func (c *KubeClient) FileWrite(src io.Reader, dst *FileSpec, pod *corev1.Pod, containerName string) (err error) {
 	dstFile := shellescape.Quote(dst.Path)
 	// cmdArr := []string{"/bin/sh", "-c", "mkdir -p " + filepath.Dir(dstFile) + " ; cat > " + dstFile}
@@ -353,21 +356,7 @@ func (c *KubeClient) FileWrite(src io.Reader, dst *FileSpec, pod *corev1.Pod, co
 	return c.Exec(pod, containerName, cmdArr, src, io.Discard)
 }
 
-// FileReaderGet gets a reader to a file on a pod
-// Use this to write to a local file...
-// // open the dstFile
-// f, err := os.OpenFile(dst.File, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
-//
-//	if err != nil {
-//		return err
-//	}
-//
-//	defer func() {
-//		f.Sync()
-//		f.Close()
-//	}()
-//
-// io.Copy(dstFile, reader)
+// FileRead copies file on a pod to the writer
 func (c *KubeClient) FileRead(src *FileSpec, dst io.Writer, pod *corev1.Pod, containerName string) (err error) {
 	srcFileFullPath := shellescape.Quote(src.Path)
 	fileStats, err := c.FileStatGet(pod, containerName, srcFileFullPath)
@@ -495,9 +484,13 @@ func (c *KubeClient) FileStatGet(pod *corev1.Pod, containerName, path string) (f
 	}, nil
 }
 
-// FileRm removes a file from a remote
-func (c *KubeClient) FileRm(dst *FileSpec, pod *corev1.Pod, containerName string) (string, error) {
-	cmdArr := []string{"/bin/sh", "-c", "rm -rf " + dst.Path}
+// Rm removes a file from a remote
+func (c *KubeClient) Rm(
+	src *FileSpec,
+	pod *corev1.Pod,
+	containerName string) (string, error) {
+
+	cmdArr := []string{"/bin/sh", "-c", "rm -rf " + src.Path}
 	fmt.Println(strings.Join(cmdArr, " "))
 	return c.ExecSync(pod, containerName, cmdArr, nil)
 }
