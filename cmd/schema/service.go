@@ -253,7 +253,7 @@ func (s *Service) IsStatefulSet() bool {
 	return s.Scheme == "statefulset"
 }
 
-func (s *Service) Replicas(kubeClient *kube.KubeClient) (n int, err error) {
+func (s *Service) Replicas(kubeClient *kube.Client) (n int, err error) {
 	if !s.IsStatefulSet() {
 		return 0, fmt.Errorf("iterating requires a statefulset")
 	}
@@ -302,7 +302,7 @@ func (s *Service) ServicePodGet(replica int) (*Service, error) {
 }
 
 func (s *Service) ForEachServicePod(
-	kubeClient *kube.KubeClient, fn func(podService *Service) error) (err error) {
+	kubeClient *kube.Client, fn func(podService *Service) error) (err error) {
 	replicas, err := s.Replicas(kubeClient)
 	if err != nil {
 		return err
@@ -324,7 +324,7 @@ func (s *Service) ForEachServicePod(
 // Snap initiates a snapshop / backup of the service.
 // the snap message is posted to the raft, so there is no
 // need to send this to each server in the StatefulSet
-func (s *Service) Snap(kubeClient *kube.KubeClient) (err error) {
+func (s *Service) Snap(kubeClient *kube.Client) (err error) {
 	core.Log.Warnf("running remote backup for %s", s.Spec)
 
 	var reqURL string
@@ -376,7 +376,7 @@ func (s *Service) Snap(kubeClient *kube.KubeClient) (err error) {
 // Reset calls the reset endpoint for the service.
 // The service defines the behavior, but this should basically clean
 // the datasource in preparation for data loading.
-func (s *Service) Reset(kubeClient *kube.KubeClient) (err error) {
+func (s *Service) Reset(kubeClient *kube.Client) (err error) {
 	if s.IsStatefulSet() {
 		return s.ForEachServicePod(kubeClient, func(servicePod *Service) error {
 			return servicePod.Reset(kubeClient)
@@ -401,7 +401,7 @@ func (s *Service) Reset(kubeClient *kube.KubeClient) (err error) {
 // multiple data files to the service (eg. when we restore prod data to a
 // dev service), so we break this out.
 func (s *Service) Stage(
-	kubeClient *kube.KubeClient, srcArchiveFile *ArchiveFile) error {
+	kubeClient *kube.Client, srcArchiveFile *ArchiveFile) error {
 	if s.IsStatefulSet() {
 		if s.IsStatefulSet() {
 			return s.ForEachServicePod(kubeClient, func(servicePod *Service) error {
@@ -477,7 +477,7 @@ func (s *Service) Stage(
 }
 
 // Restore actuates the actual loading of data after staging
-func (s *Service) Restore(kubeClient *kube.KubeClient) error {
+func (s *Service) Restore(kubeClient *kube.Client) error {
 	if s.IsStatefulSet() {
 		return s.ForEachServicePod(kubeClient, func(servicePod *Service) error {
 			return servicePod.Restore(kubeClient)
@@ -500,7 +500,7 @@ func (s *Service) Restore(kubeClient *kube.KubeClient) error {
 
 // RAFTReset resets the raft after a restore. This is necessary in
 // The service decides how to do this, ultimately.
-func (s *Service) RAFTReset(kubeClient *kube.KubeClient) error {
+func (s *Service) RAFTReset(kubeClient *kube.Client) error {
 	if s.IsStatefulSet() {
 		return s.ForEachServicePod(kubeClient, func(servicePod *Service) error {
 			return servicePod.RAFTReset(kubeClient)

@@ -1,16 +1,13 @@
-package main
+package util
 
 import (
 	"github.com/jkassis/jerrie/core"
+	"github.com/jkassis/jerriedr/cmd/kube"
 	"github.com/jkassis/jerriedr/cmd/schema"
-	"github.com/spf13/viper"
 )
 
-func EnvRestore(v *viper.Viper, srcArchiveSpecs, dstServiceSpecs []string) {
+func EnvRestore(kubeClient *kube.Client, srcArchiveSpecs, dstServiceSpecs []string) {
 	var err error
-
-	// get kube client
-	kubeClient, _ := KubeClientGet(v)
 
 	// get src and dst archiveSets and serviceSets from specs
 	var srcArchiveSet *schema.ArchiveSet
@@ -46,7 +43,7 @@ func EnvRestore(v *viper.Viper, srcArchiveSpecs, dstServiceSpecs []string) {
 			}
 		}
 		if !hasFiles {
-			core.Log.Fatalf("found no snapshots in %v", prodBackupArchiveSpecs)
+			core.Log.Fatalf("found no snapshots in %v", srcArchiveSpecs)
 		}
 
 		picker := ArchiveFileSetPickerNew()

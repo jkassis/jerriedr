@@ -101,11 +101,11 @@ func FlagsAddRestoreArchivesDir(c *cobra.Command, v *viper.Viper) {
 	v.BindPFlag(FLAG_RESTORE_ARCHIVE, c.PersistentFlags().Lookup(FLAG_RESTORE_ARCHIVE))
 }
 
-func KubeClientGet(v *viper.Viper) (*kube.KubeClient, error) {
+func KubeClientGet(v *viper.Viper) (*kube.Client, error) {
 	// use the current context in kubeconfig
 	kubeMasterURL := v.GetString(FLAG_KUBE_MASTER_URL)
 	kubeConfigPath := v.GetString(FLAG_KUBE_CONFIG_PATH)
-	return kube.NewKubeClient(kubeMasterURL, kubeConfigPath)
+	return kube.NewClient(kubeMasterURL, kubeConfigPath)
 }
 
 func KubeConfGet(v *viper.Viper) (*restclient.Config, error) {

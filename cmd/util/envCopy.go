@@ -1,21 +1,20 @@
-package main
+package util
 
 import (
 	"fmt"
 	"time"
 
 	"github.com/jkassis/jerrie/core"
+	"github.com/jkassis/jerriedr/cmd/kube"
 	"github.com/jkassis/jerriedr/cmd/schema"
-	"github.com/spf13/viper"
+	"github.com/jkassis/jerriedr/cmd/ui"
 	"golang.org/x/sync/errgroup"
 )
 
 // EnvCopy gets a list of source snapshots, prompts the user
 // to select one and copies the snapshot to the destination env.
-func EnvCopy(v *viper.Viper, srcArchiveSpecs, dstArchiveSpecs []string) {
+func EnvCopy(kubeClient *kube.Client, srcArchiveSpecs, dstArchiveSpecs []string) {
 	var err error
-
-	kubeClient, _ := KubeClientGet(v)
 
 	// get src and dst archiveSets
 	var srcArchiveSet, dstArchiveSet *schema.ArchiveSet
@@ -49,7 +48,7 @@ func EnvCopy(v *viper.Viper, srcArchiveSpecs, dstArchiveSpecs []string) {
 	}
 
 	// present a progressWatcher
-	progressWatcher := ProgressWatcherNew()
+	progressWatcher := ui.ProgressWatcherNew()
 	go progressWatcher.Run()
 
 	// copy files
@@ -70,7 +69,7 @@ func EnvCopy(v *viper.Viper, srcArchiveSpecs, dstArchiveSpecs []string) {
 			}
 
 			errGroup.Go(func() error {
-				err := ArchiveFileCopy(v, srcArchiveFile, dstArchiveFile, progressWatcher)
+				err := ArchiveFileCopy(kubeClient, srcArchiveFile, dstArchiveFile, progressWatcher)
 				if err != nil {
 					return fmt.Errorf("could not copy archive file: %v", err)
 				}
@@ -90,8 +89,13 @@ func EnvCopy(v *viper.Viper, srcArchiveSpecs, dstArchiveSpecs []string) {
 	progressWatcher.App.Stop()
 
 	// report at the end
-	for _, watch := range progressWatcher.watches {
-		message := fmt.Sprintf("[ %12d of %12d %s ] %s", watch.progress, watch.total, watch.unit, watch.item)
+	for _, watch := range progressWatcher.Watches {
+		message := fmt.Sprintf(
+			"[ %12d of %12d %s ] %s",
+			watch.Progress,
+			watch.Total,
+			watch.Unit,
+			watch.Item)
 		core.Log.Warnf(message)
 	}
 }

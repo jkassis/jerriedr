@@ -193,7 +193,7 @@ func (a *Archive) PodArchiveGet(replica int) (*Archive, error) {
 	}, nil
 }
 
-func (a *Archive) Replicas(kubeClient *kube.KubeClient) (n int, err error) {
+func (a *Archive) Replicas(kubeClient *kube.Client) (n int, err error) {
 	if !a.IsStatefulSet() {
 		return 0, fmt.Errorf("iterating requires a statefulset")
 	}
@@ -213,7 +213,7 @@ func (a *Archive) Replicas(kubeClient *kube.KubeClient) (n int, err error) {
 	return int(*replicas), nil
 }
 
-func (a *Archive) FilesFetch(kubeClient *kube.KubeClient) error {
+func (a *Archive) FilesFetch(kubeClient *kube.Client) error {
 	files := make([]*ArchiveFile, 0)
 
 	if a.IsStatefulSet() {

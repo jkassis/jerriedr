@@ -48,8 +48,8 @@ import (
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/openstack"
 )
 
-// KubeClient is a kube client
-type KubeClient struct {
+// Client is a kube client
+type Client struct {
 	Clientset      *kubernetes.Clientset
 	Config         *rest.Config
 	KubeConfigPath string
@@ -57,9 +57,9 @@ type KubeClient struct {
 	Rand           *rand.Rand
 }
 
-// NewKubeClient returns a new, init'd kube client
-func NewKubeClient(masterURL, kubeConfigPath string) (*KubeClient, error) {
-	kubeClient := &KubeClient{
+// NewClient returns a new, init'd kube client
+func NewClient(masterURL, kubeConfigPath string) (*Client, error) {
+	kubeClient := &Client{
 		KubeConfigPath: kubeConfigPath,
 		MasterURL:      masterURL,
 	}
@@ -71,7 +71,7 @@ func NewKubeClient(masterURL, kubeConfigPath string) (*KubeClient, error) {
 }
 
 // Init starts the kubernetes client
-func (c *KubeClient) Init() error {
+func (c *Client) Init() error {
 	config, err := clientcmd.BuildConfigFromFlags(c.MasterURL, c.KubeConfigPath)
 	if err != nil {
 		return fmt.Errorf("could not load kube config from %s: %v", c.KubeConfigPath, err)
@@ -95,7 +95,7 @@ func (c *KubeClient) Init() error {
 }
 
 // DeploymentGetByNamespace returns deployments
-func (c *KubeClient) DeploymentGetByNamespace(namespace string, pattern string) ([]string, error) {
+func (c *Client) DeploymentGetByNamespace(namespace string, pattern string) ([]string, error) {
 	matchingDeploymentNames := []string{}
 	deploymentsList, err := c.Clientset.AppsV1().Deployments(namespace).List(context.Background(), metav1.ListOptions{})
 	if err != nil {
@@ -119,7 +119,7 @@ func (c *KubeClient) DeploymentGetByNamespace(namespace string, pattern string) 
 }
 
 // StatefulSetGetByNamespace returns deployments
-func (c *KubeClient) StatefulSetGetByNamespace(namespace string, pattern string) ([]string, error) {
+func (c *Client) StatefulSetGetByNamespace(namespace string, pattern string) ([]string, error) {
 	matchingDeploymentNames := []string{}
 	statefulSetList, err := c.Clientset.AppsV1().StatefulSets(namespace).List(context.Background(), metav1.ListOptions{})
 	if err != nil {
@@ -143,7 +143,7 @@ func (c *KubeClient) StatefulSetGetByNamespace(namespace string, pattern string)
 }
 
 // StatefulSetGetByName returns deployments
-func (c *KubeClient) StatefulSetGetByName(namespace string, name string) (*v1.StatefulSet, error) {
+func (c *Client) StatefulSetGetByName(namespace string, name string) (*v1.StatefulSet, error) {
 	statefulSet, err := c.Clientset.AppsV1().StatefulSets(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	if k8sErrors.IsNotFound(err) {
 		return nil, fmt.Errorf("pod %s in namespace %s not found", statefulSet, namespace)
@@ -156,7 +156,7 @@ func (c *KubeClient) StatefulSetGetByName(namespace string, name string) (*v1.St
 }
 
 // PodGetByName returns a pod
-func (c *KubeClient) PodGetByName(
+func (c *Client) PodGetByName(
 	namespace,
 	name string) (*corev1.Pod, error) {
 	pod, err := c.Clientset.CoreV1().Pods(namespace).Get(context.Background(), name, metav1.GetOptions{})
@@ -171,7 +171,7 @@ func (c *KubeClient) PodGetByName(
 }
 
 // PodGetByNamespace returns all pods in a cluster
-func (c *KubeClient) PodGetByNamespace(namespace string) (*corev1.PodList, error) {
+func (c *Client) PodGetByNamespace(namespace string) (*corev1.PodList, error) {
 	pods, err := c.Clientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{})
 	if err != nil {
 		return nil, err
@@ -180,7 +180,7 @@ func (c *KubeClient) PodGetByNamespace(namespace string) (*corev1.PodList, error
 }
 
 // PodGetByDeploymentName returns all pods for a deployment
-func (c *KubeClient) PodGetByDeploymentName(namespace, deploymentName string) (*corev1.PodList, error) {
+func (c *Client) PodGetByDeploymentName(namespace, deploymentName string) (*corev1.PodList, error) {
 	pods, err := c.Clientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{
 		LabelSelector: "deployment=" + deploymentName,
 	})
@@ -191,7 +191,7 @@ func (c *KubeClient) PodGetByDeploymentName(namespace, deploymentName string) (*
 }
 
 // PodGetRandomByDeploymentName return a random pod in the namespace / deployment
-func (c *KubeClient) PodGetRandomByDeploymentName(namespace, deploymentName string) (*corev1.Pod, error) {
+func (c *Client) PodGetRandomByDeploymentName(namespace, deploymentName string) (*corev1.Pod, error) {
 	// Get a deployment to operate on... we might be wrong
 	deployments, err := c.DeploymentGetByNamespace(namespace, deploymentName)
 	if err != nil {
@@ -218,7 +218,7 @@ func (c *KubeClient) PodGetRandomByDeploymentName(namespace, deploymentName stri
 // Exec executes a command asynchronously on a given pod
 // stdin is piped to the remote shell if provided or nothing if nil
 // returns the output from stdout and stderr
-func (c *KubeClient) Exec(
+func (c *Client) Exec(
 	pod *corev1.Pod,
 	containerName string,
 	command []string,
@@ -286,7 +286,7 @@ func (c *KubeClient) Exec(
 // ExecSync executes a command synchronously on a given pod
 // stdin is piped to the remote shell if provided or nothing if nil
 // returns the output from stdout or err as a string and err
-func (c *KubeClient) ExecSync(pod *corev1.Pod, containerName string, command []string, stdin io.Reader) (string, error) {
+func (c *Client) ExecSync(pod *corev1.Pod, containerName string, command []string, stdin io.Reader) (string, error) {
 	stdoutReader, stdoutWriter := io.Pipe()
 	eg := errgroup.Group{}
 
@@ -309,7 +309,7 @@ func (c *KubeClient) ExecSync(pod *corev1.Pod, containerName string, command []s
 }
 
 // Ls returns a list of files on the pod in the given dir
-func (c *KubeClient) Ls(dirPath string, pod *corev1.Pod, containerName string) ([]string, error) {
+func (c *Client) Ls(dirPath string, pod *corev1.Pod, containerName string) ([]string, error) {
 	dirPath = shellescape.Quote(dirPath)
 	cmdArr := []string{"/bin/sh", "-c", "ls " + dirPath}
 	stdout, err := c.ExecSync(pod, containerName, cmdArr, nil)
@@ -320,7 +320,7 @@ func (c *KubeClient) Ls(dirPath string, pod *corev1.Pod, containerName string) (
 }
 
 // MkDir copies a file from local dir to remote
-func (c *KubeClient) MkDir(dirPath string, pod *corev1.Pod, containerName string) (stdout string, err error) {
+func (c *Client) MkDir(dirPath string, pod *corev1.Pod, containerName string) (stdout string, err error) {
 	dirPath = shellescape.Quote(dirPath)
 	cmdArr := []string{"/bin/sh", "-c", "mkdir -p " + dirPath}
 	logrus.Info("making directory in pod : '" + pod.Name + "'")
@@ -328,7 +328,7 @@ func (c *KubeClient) MkDir(dirPath string, pod *corev1.Pod, containerName string
 }
 
 // Ln creates a softlink
-func (c *KubeClient) Ln(srcPath, dstPath string, pod *corev1.Pod, containerName string) (stdout string, err error) {
+func (c *Client) Ln(srcPath, dstPath string, pod *corev1.Pod, containerName string) (stdout string, err error) {
 	srcPath = shellescape.Quote(srcPath)
 	dstPath = shellescape.Quote(dstPath)
 	cmdArr := []string{"/bin/sh", "-c",
@@ -338,7 +338,7 @@ func (c *KubeClient) Ln(srcPath, dstPath string, pod *corev1.Pod, containerName 
 }
 
 // FileWrite copies content at io.Reader to a file on a pod
-func (c *KubeClient) FileWrite(src io.Reader, dstPath string, pod *corev1.Pod, containerName string) (err error) {
+func (c *Client) FileWrite(src io.Reader, dstPath string, pod *corev1.Pod, containerName string) (err error) {
 	dstPath = shellescape.Quote(dstPath)
 	// cmdArr := []string{"/bin/sh", "-c", "mkdir -p " + filepath.Dir(dstFile) + " ; cat > " + dstFile}
 	cmdArr := []string{"env", "cat", ">", dstPath}
@@ -346,7 +346,7 @@ func (c *KubeClient) FileWrite(src io.Reader, dstPath string, pod *corev1.Pod, c
 }
 
 // FileRead copies file on a pod to the writer
-func (c *KubeClient) FileRead(src string, dst io.Writer, pod *corev1.Pod, containerName string) (err error) {
+func (c *Client) FileRead(src string, dst io.Writer, pod *corev1.Pod, containerName string) (err error) {
 	src = shellescape.Quote(src)
 	fileStats, err := c.Stat(pod, containerName, src)
 	if err != nil {
@@ -427,7 +427,7 @@ type FileStat struct {
 	Name string
 }
 
-func (c *KubeClient) MD5Sum(pod *corev1.Pod, containerName, path string) (hash string, err error) {
+func (c *Client) MD5Sum(pod *corev1.Pod, containerName, path string) (hash string, err error) {
 	srcFile := shellescape.Quote(path)
 	cmdArr := []string{"env", "md5sum", srcFile}
 	response, err := c.ExecSync(pod, containerName, cmdArr, nil)
@@ -439,7 +439,7 @@ func (c *KubeClient) MD5Sum(pod *corev1.Pod, containerName, path string) (hash s
 	return parts[0], nil
 }
 
-func (c *KubeClient) Stat(pod *corev1.Pod, containerName, path string) (fileState *FileStat, err error) {
+func (c *Client) Stat(pod *corev1.Pod, containerName, path string) (fileState *FileStat, err error) {
 	srcFile := shellescape.Quote(path)
 
 	// this appears to be the Alpine Linux variant... :cringe:
@@ -474,7 +474,7 @@ func (c *KubeClient) Stat(pod *corev1.Pod, containerName, path string) (fileStat
 }
 
 // Rm removes a file from a remote
-func (c *KubeClient) Rm(targetPath string, pod *corev1.Pod,
+func (c *Client) Rm(targetPath string, pod *corev1.Pod,
 	containerName string) (string, error) {
 
 	targetPath = shellescape.Quote(targetPath)
@@ -573,7 +573,7 @@ type PortForwardRequest struct {
 }
 
 // It is to forward port, and return the forwarder.
-func (c *KubeClient) PortForward(req *PortForwardRequest) (*portforward.ForwardedPort, error) {
+func (c *Client) PortForward(req *PortForwardRequest) (*portforward.ForwardedPort, error) {
 	// get the pod
 	pod, err := c.PodGetByName(req.PodNamespace, req.PodName)
 	if err != nil {

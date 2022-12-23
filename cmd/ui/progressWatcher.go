@@ -1,4 +1,4 @@
-package main
+package ui
 
 import (
 	"fmt"
@@ -8,22 +8,22 @@ import (
 )
 
 type Watch struct {
-	progress int64
-	total    int64
-	item     string
-	unit     string
+	Progress int64
+	Total    int64
+	Item     string
+	Unit     string
 }
 
 type ProgressWatcher struct {
 	App          *tview.Application
 	ProgressBars *tview.Table
 	RootView     *tview.Table
-	watches      []*Watch
+	Watches      []*Watch
 }
 
 func ProgressWatcherNew() *ProgressWatcher {
 	p := &ProgressWatcher{
-		watches: make([]*Watch, 0),
+		Watches: make([]*Watch, 0),
 	}
 
 	p.ProgressBars = tview.NewTable()
@@ -38,12 +38,12 @@ func ProgressWatcherNew() *ProgressWatcher {
 }
 
 func (p *ProgressWatcher) AddWatch(watch *Watch) func(progress int64) {
-	cell := tview.NewTableCell(fmt.Sprintf("Hello %d", len(p.watches)))
-	p.ProgressBars.SetCell(len(p.watches), 0, cell)
-	p.watches = append(p.watches, watch)
+	cell := tview.NewTableCell(fmt.Sprintf("Hello %d", len(p.Watches)))
+	p.ProgressBars.SetCell(len(p.Watches), 0, cell)
+	p.Watches = append(p.Watches, watch)
 
 	return func(progress int64) {
-		watch.progress += progress
+		watch.Progress += progress
 	}
 }
 
@@ -52,8 +52,8 @@ func (p *ProgressWatcher) Run() {
 
 	go func() {
 		updateWatches := func() {
-			for i, watch := range p.watches {
-				message := fmt.Sprintf("[ %12d of %12d %s ] %s", watch.progress, watch.total, watch.unit, watch.item)
+			for i, watch := range p.Watches {
+				message := fmt.Sprintf("[ %12d of %12d %s ] %s", watch.Progress, watch.Total, watch.Unit, watch.Item)
 				p.ProgressBars.GetCell(i, 0).SetText(message)
 			}
 		}

@@ -5,6 +5,7 @@ import (
 
 	"github.com/jkassis/jerrie/core"
 	"github.com/jkassis/jerriedr/cmd/schema"
+	"github.com/jkassis/jerriedr/cmd/util"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -23,6 +24,11 @@ func init() {
 			start := time.Now()
 			core.Log.Warnf("prodServiceToProdSnap: starting")
 
+			kubeClient, err := KubeClientGet(v)
+			if err != nil {
+				core.Log.Warnf("could not init kubeClient: %v", err)
+			}
+
 			// for each service
 			services := make([]*schema.Service, 0)
 			for _, serviceSpec := range prodServiceSpecs {
@@ -34,7 +40,7 @@ func init() {
 				services = append(services, service)
 			}
 
-			err := EnvSnap(v, services)
+			err = util.EnvSnap(kubeClient, services)
 			if err != nil {
 				core.Log.Fatal("could not complete production snapshot: %v", err)
 			}

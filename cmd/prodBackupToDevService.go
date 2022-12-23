@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/jkassis/jerrie/core"
+	"github.com/jkassis/jerriedr/cmd/util"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -25,9 +27,14 @@ func init() {
 		Short: "",
 		Long:  "",
 		Run: func(cmd *cobra.Command, args []string) {
+			kubeClient, err := KubeClientGet(v)
+			if err != nil {
+				core.Log.Warnf("could not init kubeClient: %v", err)
+			}
+
 			srcArchiveSpecs := prodBackupArchiveSpecs
 			dstServiceSpecs := prodBackupToDevServiceSpecs
-			EnvRestore(v, srcArchiveSpecs, dstServiceSpecs)
+			util.EnvRestore(kubeClient, srcArchiveSpecs, dstServiceSpecs)
 		},
 	}
 
