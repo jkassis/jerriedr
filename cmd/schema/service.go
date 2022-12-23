@@ -416,20 +416,14 @@ func (s *Service) Stage(
 			return err
 		}
 
-		restoreFolder := &kube.FileSpec{
-			PodNamespace: s.KubeNamespace,
-			PodName:      s.KubeName,
-			Path:         s.RestorePath,
-		}
-
 		// reset the restore folder
-		_, err = kubeClient.Rm(restoreFolder, pod, "")
+		_, err = kubeClient.Rm(s.RestorePath, pod, "")
 		if err != nil {
 			return err
 		}
 
 		// make the restore folder
-		_, err = kubeClient.MkDir(restoreFolder, pod, "")
+		_, err = kubeClient.MkDir(s.RestorePath, pod, "")
 		if err != nil {
 			return err
 		}
@@ -446,13 +440,7 @@ func (s *Service) Stage(
 		// make a symlink
 		srcArchiveFilePath := srcArchiveFile.Archive.Path + "/" + srcArchiveFile.Name
 		dstArchiveFilePath := s.RestorePath + "/" + srcArchiveFile.Name
-		_, err = kubeClient.Ln(
-			&kube.FileSpec{
-				PodNamespace: s.KubeNamespace,
-				PodName:      s.KubeName,
-				Path:         s.RestorePath,
-			},
-			dstArchiveFilePath, pod, "")
+		_, err = kubeClient.Ln(s.RestorePath, dstArchiveFilePath, pod, "")
 		if err != nil {
 			return fmt.Errorf("cound not create symlink: src %s to %s: %v",
 				srcArchiveFilePath, dstArchiveFilePath, err)

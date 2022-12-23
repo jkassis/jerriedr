@@ -254,11 +254,7 @@ func (a *Archive) FilesFetch(kubeClient *kube.KubeClient) error {
 		}
 
 		core.Log.Warnf("fetching file list for pod archive %s", a.Spec)
-		podFileNames, err := kubeClient.DirLs(&kube.FileSpec{
-			PodNamespace: a.KubeNamespace,
-			PodName:      a.KubeName,
-			Path:         a.Path,
-		}, pod, a.KubeContainer)
+		podFileNames, err := kubeClient.Ls(a.Path, pod, a.KubeContainer)
 		if err != nil {
 			return fmt.Errorf("could not list files for podSpec %s: %v", a.Spec, err)
 		}

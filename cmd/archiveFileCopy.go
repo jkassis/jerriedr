@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/jkassis/jerrie/core"
-	"github.com/jkassis/jerriedr/cmd/kube"
 	"github.com/jkassis/jerriedr/cmd/schema"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -99,7 +98,7 @@ func ArchiveFileCopy(v *viper.Viper, srcArchiveFile, dstArchiveFile *schema.Arch
 
 		// get the file size
 		srcFileFullPath := srcArchiveFile.Archive.Path + "/" + srcArchiveFile.Name
-		fileStats, err := kubeClient.FileStatGet(pod, srcArchiveFile.Archive.KubeContainer, srcFileFullPath)
+		fileStats, err := kubeClient.Stat(pod, srcArchiveFile.Archive.KubeContainer, srcFileFullPath)
 		if err != nil {
 			return fmt.Errorf("could not get stats for %s: %v", srcFileFullPath, err)
 		}
@@ -107,16 +106,8 @@ func ArchiveFileCopy(v *viper.Viper, srcArchiveFile, dstArchiveFile *schema.Arch
 
 		// read to the splitter
 		eg.Go(func() error {
-			err := kubeClient.FileRead(
-				&kube.FileSpec{
-					PodNamespace: srcArchiveFile.Archive.KubeNamespace,
-					PodName:      srcArchiveFile.Archive.KubeName,
-					Path:         srcFileFullPath,
-				},
-				splitWriter,
-				pod,
-				srcArchiveFile.Archive.KubeContainer,
-			)
+			err := kubeClient.FileRead(srcFileFullPath, splitWriter, pod,
+				srcArchiveFile.Archive.KubeContainer)
 			if err != nil {
 				return fmt.Errorf("trouble with file read while copying file from kube: %v", err)
 			}
@@ -193,11 +184,7 @@ func ArchiveFileCopy(v *viper.Viper, srcArchiveFile, dstArchiveFile *schema.Arch
 		eg.Go(func() error {
 			return kubeClient.FileWrite(
 				dstPipeReader,
-				&kube.FileSpec{
-					PodNamespace: dstArchiveFile.Archive.KubeNamespace,
-					PodName:      podName,
-					Path:         dstArchiveFile.Archive.Path + "/" + dstArchiveFile.Name,
-				},
+				dstArchiveFile.Archive.Path+"/"+dstArchiveFile.Name,
 				pod,
 				srcArchiveFile.Archive.KubeContainer,
 			)

@@ -308,21 +308,10 @@ func (c *KubeClient) ExecSync(pod *corev1.Pod, containerName string, command []s
 	return string(stdout), err
 }
 
-// FileSpec holds a location for a remote or local file
-type FileSpec struct {
-	PodNamespace string
-	PodName      string
-	Path         string
-}
-
-func (f *FileSpec) String() string {
-	return fmt.Sprintf("ns: %s | podName: %s | path: %s", f.PodNamespace, f.PodName, f.Path)
-}
-
-// DirLs returns a list of files on the pod in the given dir
-func (c *KubeClient) DirLs(src *FileSpec, pod *corev1.Pod, containerName string) ([]string, error) {
-	srcFile := shellescape.Quote(src.Path)
-	cmdArr := []string{"/bin/sh", "-c", "ls " + srcFile}
+// Ls returns a list of files on the pod in the given dir
+func (c *KubeClient) Ls(dirPath string, pod *corev1.Pod, containerName string) ([]string, error) {
+	dirPath = shellescape.Quote(dirPath)
+	cmdArr := []string{"/bin/sh", "-c", "ls " + dirPath}
 	stdout, err := c.ExecSync(pod, containerName, cmdArr, nil)
 	if err != nil {
 		return nil, err
@@ -331,42 +320,42 @@ func (c *KubeClient) DirLs(src *FileSpec, pod *corev1.Pod, containerName string)
 }
 
 // MkDir copies a file from local dir to remote
-func (c *KubeClient) MkDir(src *FileSpec, pod *corev1.Pod, containerName string) (stdout string, err error) {
-	destFile := shellescape.Quote(src.Path)
-	cmdArr := []string{"/bin/sh", "-c", "mkdir -p " + destFile}
+func (c *KubeClient) MkDir(dirPath string, pod *corev1.Pod, containerName string) (stdout string, err error) {
+	dirPath = shellescape.Quote(dirPath)
+	cmdArr := []string{"/bin/sh", "-c", "mkdir -p " + dirPath}
 	logrus.Info("making directory in pod : '" + pod.Name + "'")
 	return c.ExecSync(pod, containerName, cmdArr, nil)
 }
 
 // Ln creates a softlink
-func (c *KubeClient) Ln(src *FileSpec, dst string, pod *corev1.Pod, containerName string) (stdout string, err error) {
-	srcFilePath := shellescape.Quote(src.Path)
-	dstFilePath := shellescape.Quote(dst)
+func (c *KubeClient) Ln(srcPath, dstPath string, pod *corev1.Pod, containerName string) (stdout string, err error) {
+	srcPath = shellescape.Quote(srcPath)
+	dstPath = shellescape.Quote(dstPath)
 	cmdArr := []string{"/bin/sh", "-c",
-		fmt.Sprintf("ln -s %s %s", srcFilePath, dstFilePath)}
-	logrus.Info("linking %s to %s in pod %s", srcFilePath, dstFilePath, pod.Name)
+		fmt.Sprintf("ln -s %s %s", srcPath, dstPath)}
+	logrus.Info("linking %s to %s in pod %s", srcPath, dstPath, pod.Name)
 	return c.ExecSync(pod, containerName, cmdArr, nil)
 }
 
 // FileWrite copies content at io.Reader to a file on a pod
-func (c *KubeClient) FileWrite(src io.Reader, dst *FileSpec, pod *corev1.Pod, containerName string) (err error) {
-	dstFile := shellescape.Quote(dst.Path)
+func (c *KubeClient) FileWrite(src io.Reader, dstPath string, pod *corev1.Pod, containerName string) (err error) {
+	dstPath = shellescape.Quote(dstPath)
 	// cmdArr := []string{"/bin/sh", "-c", "mkdir -p " + filepath.Dir(dstFile) + " ; cat > " + dstFile}
-	cmdArr := []string{"env", "cat", ">", dstFile}
+	cmdArr := []string{"env", "cat", ">", dstPath}
 	return c.Exec(pod, containerName, cmdArr, src, io.Discard)
 }
 
 // FileRead copies file on a pod to the writer
-func (c *KubeClient) FileRead(src *FileSpec, dst io.Writer, pod *corev1.Pod, containerName string) (err error) {
-	srcFileFullPath := shellescape.Quote(src.Path)
-	fileStats, err := c.FileStatGet(pod, containerName, srcFileFullPath)
+func (c *KubeClient) FileRead(src string, dst io.Writer, pod *corev1.Pod, containerName string) (err error) {
+	src = shellescape.Quote(src)
+	fileStats, err := c.Stat(pod, containerName, src)
 	if err != nil {
-		return fmt.Errorf("could not get stats for %s: %v", srcFileFullPath, err)
+		return fmt.Errorf("could not get stats for %s: %v", src, err)
 	}
 	srcFileSize := fileStats.Size
-	srcMD5, err := c.FileMD5Get(pod, containerName, srcFileFullPath)
+	srcMD5, err := c.MD5Sum(pod, containerName, src)
 	if err != nil {
-		return fmt.Errorf("could not get md5 for %s: %v", srcFileFullPath, err)
+		return fmt.Errorf("could not get md5 for %s: %v", src, err)
 	}
 
 	hasher := md5.New()
@@ -384,7 +373,7 @@ func (c *KubeClient) FileRead(src *FileSpec, dst io.Writer, pod *corev1.Pod, con
 		// transfer
 		eg := errgroup.Group{}
 		eg.Go(func() (err error) {
-			cmdArr := []string{"tail", "-c", fmt.Sprintf("+%d", m+1), srcFileFullPath}
+			cmdArr := []string{"tail", "-c", fmt.Sprintf("+%d", m+1), src}
 			err = c.Exec(pod, containerName, cmdArr, nil, pipeW)
 			pipeErr := pipeW.Close() // always close the pipe
 			if pipeErr != nil {
@@ -438,7 +427,7 @@ type FileStat struct {
 	Name string
 }
 
-func (c *KubeClient) FileMD5Get(pod *corev1.Pod, containerName, path string) (hash string, err error) {
+func (c *KubeClient) MD5Sum(pod *corev1.Pod, containerName, path string) (hash string, err error) {
 	srcFile := shellescape.Quote(path)
 	cmdArr := []string{"env", "md5sum", srcFile}
 	response, err := c.ExecSync(pod, containerName, cmdArr, nil)
@@ -450,7 +439,7 @@ func (c *KubeClient) FileMD5Get(pod *corev1.Pod, containerName, path string) (ha
 	return parts[0], nil
 }
 
-func (c *KubeClient) FileStatGet(pod *corev1.Pod, containerName, path string) (fileState *FileStat, err error) {
+func (c *KubeClient) Stat(pod *corev1.Pod, containerName, path string) (fileState *FileStat, err error) {
 	srcFile := shellescape.Quote(path)
 
 	// this appears to be the Alpine Linux variant... :cringe:
@@ -485,12 +474,11 @@ func (c *KubeClient) FileStatGet(pod *corev1.Pod, containerName, path string) (f
 }
 
 // Rm removes a file from a remote
-func (c *KubeClient) Rm(
-	src *FileSpec,
-	pod *corev1.Pod,
+func (c *KubeClient) Rm(targetPath string, pod *corev1.Pod,
 	containerName string) (string, error) {
 
-	cmdArr := []string{"/bin/sh", "-c", "rm -rf " + src.Path}
+	targetPath = shellescape.Quote(targetPath)
+	cmdArr := []string{"/bin/sh", "-c", "rm -rf " + targetPath}
 	fmt.Println(strings.Join(cmdArr, " "))
 	return c.ExecSync(pod, containerName, cmdArr, nil)
 }
