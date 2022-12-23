@@ -19,7 +19,26 @@ func init() {
 		Short: ``,
 		Long:  "",
 		Run: func(cmd *cobra.Command, args []string) {
-			CMDDevServiceToDevSnap(v)
+			start := time.Now()
+			core.Log.Warnf("devSnapshotTake: starting")
+
+			// for each service
+			services := make([]*schema.Service, 0)
+			for _, serviceSpec := range devServiceSpecs {
+				service := &schema.Service{}
+				if err := service.Parse(serviceSpec); err != nil {
+					core.Log.Fatalf("could not parse serviceSpec %s", serviceSpec)
+				}
+				services = append(services, service)
+			}
+
+			err := EnvSnap(v, services)
+			if err != nil {
+				core.Log.Fatal("could not complete dev snapshot: %v", err)
+			}
+
+			duration := time.Since(start)
+			core.Log.Warnf("devSnapshotTake: took %s", duration.String())
 		},
 	}
 
@@ -28,27 +47,4 @@ func init() {
 	FlagsAddAPIVersionFlag(c, v)
 
 	MAIN.AddCommand(c)
-}
-
-func CMDDevServiceToDevSnap(v *viper.Viper) {
-	start := time.Now()
-	core.Log.Warnf("devSnapshotTake: starting")
-
-	// for each service
-	services := make([]*schema.Service, 0)
-	for _, serviceSpec := range devServiceSpecs {
-		service := &schema.Service{}
-		if err := service.Parse(serviceSpec); err != nil {
-			core.Log.Fatalf("could not parse serviceSpec %s", serviceSpec)
-		}
-		services = append(services, service)
-	}
-
-	err := EnvSnap(v, services)
-	if err != nil {
-		core.Log.Fatal("could not complete dev snapshot: %v", err)
-	}
-
-	duration := time.Since(start)
-	core.Log.Warnf("devSnapshotTake: took %s", duration.String())
 }

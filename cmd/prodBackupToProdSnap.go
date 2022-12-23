@@ -15,16 +15,12 @@ func init() {
 		Short: ``,
 		Long:  "",
 		Run: func(cmd *cobra.Command, args []string) {
-			CMDProdBackupToProdSnap(v)
+			srcArchiveSpecs := prodBackupArchiveSpecs
+			dstArchiveSpecs := prodSnapArchiveSpecs
+			EnvCopy(v, srcArchiveSpecs, dstArchiveSpecs)
 		},
 	}
 
 	FlagsAddKubeFlags(c, v)
 	MAIN.AddCommand(c)
-}
-
-func CMDProdBackupToProdSnap(v *viper.Viper) {
-	srcArchiveSpecs := prodBackupArchiveSpecs
-	dstArchiveSpecs := prodSnapArchiveSpecs
-	EnvCopy(v, srcArchiveSpecs, dstArchiveSpecs)
 }
