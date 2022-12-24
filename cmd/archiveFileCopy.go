@@ -6,7 +6,6 @@ import (
 	"github.com/jkassis/jerrie/core"
 	"github.com/jkassis/jerriedr/cmd/schema"
 	"github.com/jkassis/jerriedr/cmd/ui"
-	archive "github.com/jkassis/jerriedr/cmd/util"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -62,7 +61,7 @@ func CMDArchiveFileCopy(v *viper.Viper) {
 		core.Log.Errorf("could not get KubeClient: %v", kubeErr)
 	}
 
-	archive.ArchiveFileCopy(kubeClient, srcArchiveFile, dstArchiveFile, progressWatcher)
+	schema.ArchiveFileCopy(kubeClient, srcArchiveFile, dstArchiveFile, progressWatcher)
 
 	duration := time.Since(start)
 	core.Log.Warnf("archiveFileCopy: took %s", duration.String())

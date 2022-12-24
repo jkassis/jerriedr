@@ -1,4 +1,4 @@
-package util
+package schema
 
 import (
 	"fmt"
@@ -6,7 +6,6 @@ import (
 
 	"github.com/jkassis/jerrie/core"
 	"github.com/jkassis/jerriedr/cmd/kube"
-	"github.com/jkassis/jerriedr/cmd/schema"
 	"github.com/jkassis/jerriedr/cmd/ui"
 	"golang.org/x/sync/errgroup"
 )
@@ -17,15 +16,15 @@ func EnvCopy(kubeClient *kube.Client, srcArchiveSpecs, dstArchiveSpecs []string)
 	var err error
 
 	// get src and dst archiveSets
-	var srcArchiveSet, dstArchiveSet *schema.ArchiveSet
+	var srcArchiveSet, dstArchiveSet *ArchiveSet
 	{
-		srcArchiveSet = schema.ArchiveSetNew()
+		srcArchiveSet = ArchiveSetNew()
 		err := srcArchiveSet.ArchiveAddAll(srcArchiveSpecs, "/backup")
 		if err != nil {
 			core.Log.Fatalf("could not add srcArchive %v", err)
 		}
 
-		dstArchiveSet = schema.ArchiveSetNew()
+		dstArchiveSet = ArchiveSetNew()
 		err = dstArchiveSet.ArchiveAddAll(dstArchiveSpecs, "")
 		if err != nil {
 			core.Log.Fatalf("could not add dstArchive %v", err)
@@ -33,21 +32,14 @@ func EnvCopy(kubeClient *kube.Client, srcArchiveSpecs, dstArchiveSpecs []string)
 	}
 
 	// pick a snapshot set
-	var srcArchiveFileSet *schema.ArchiveFileSet
+	var srcArchiveFileSet *ArchiveFileSet
 	{
 		err = srcArchiveSet.FilesFetch(kubeClient)
 		if err != nil {
 			core.Log.Fatalf("failed to get files for cluster archive set: %v", err)
 		}
 
-		var hasFiles bool
-		for _, srcArchive := range srcArchiveSet.Archives {
-			if len(srcArchive.Files) > 0 {
-				hasFiles = true
-				break
-			}
-		}
-		if !hasFiles {
+		if !srcArchiveSet.HasFiles() {
 			core.Log.Fatalf("found no snapshots in %v", srcArchiveSpecs)
 		}
 
@@ -76,7 +68,7 @@ func EnvCopy(kubeClient *kube.Client, srcArchiveSpecs, dstArchiveSpecs []string)
 				core.Log.Fatalf("couldn't find dstArchive: %v", dstArchive)
 			}
 
-			dstArchiveFile := &schema.ArchiveFile{
+			dstArchiveFile := &ArchiveFile{
 				Archive: dstArchive,
 				Name:    srcArchiveFile.Name,
 			}

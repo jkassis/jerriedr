@@ -1,4 +1,4 @@
-package util
+package schema
 
 import (
 	"fmt"
@@ -7,14 +7,13 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/jkassis/jerrie/core"
-	"github.com/jkassis/jerriedr/cmd/schema"
 	"github.com/rivo/tview"
 )
 
 type ArchiveFileSetPicker struct {
-	ArchiveSet                     *schema.ArchiveSet
+	ArchiveSet                     *ArchiveSet
 	App                            *tview.Application
-	SelectedSnapshotArchiveFileSet *schema.ArchiveFileSet
+	SelectedSnapshotArchiveFileSet *ArchiveFileSet
 	SelectedSnapshotFilesView      *tview.Table
 	SelectedSnapshotStatusView     *tview.Table
 	FiltersView                    *tview.TextView
@@ -67,7 +66,7 @@ func (p *ArchiveFileSetPicker) SelectedSnapshotViewRender(row, col int) {
 		core.Log.Errorf("no snapshots to select")
 		return
 	}
-	archiveFileSet := ref.(*schema.ArchiveFileSet)
+	archiveFileSet := ref.(*ArchiveFileSet)
 
 	// Update SelectedSnapshotStatusView
 	{
@@ -112,9 +111,9 @@ func (p *ArchiveFileSetPicker) SelectedSnapshotViewRender(row, col int) {
 	// Update SelectedSnapshotFilesView
 	{
 		// copy and sort archives by name
-		archives := make([]*schema.Archive, len(p.ArchiveSet.Archives))
+		archives := make([]*Archive, len(p.ArchiveSet.Archives))
 		copy(archives, p.ArchiveSet.Archives)
-		sort.Sort(schema.BySpec(archives))
+		sort.Sort(BySpec(archives))
 
 		// for each archive in the archiveSet
 		p.SelectedSnapshotFilesView.Clear()
@@ -142,12 +141,12 @@ func (p *ArchiveFileSetPicker) SelectedSnapshotViewRender(row, col int) {
 func (p *ArchiveFileSetPicker) Select(row, col int) {
 	selectedCell := p.SnapshotsView.GetCell(row, col)
 	ref := selectedCell.GetReference()
-	p.SelectedSnapshotArchiveFileSet = ref.(*schema.ArchiveFileSet)
+	p.SelectedSnapshotArchiveFileSet = ref.(*ArchiveFileSet)
 	p.App.Stop()
 	core.Log.Warnf("retrieving snapshot from '%s'", selectedCell.Text)
 }
 
-func (p *ArchiveFileSetPicker) ArchiveSetPut(as *schema.ArchiveSet) *ArchiveFileSetPicker {
+func (p *ArchiveFileSetPicker) ArchiveSetPut(as *ArchiveSet) *ArchiveFileSetPicker {
 	p.ArchiveSet = as
 
 	// add 1 row per snapshot

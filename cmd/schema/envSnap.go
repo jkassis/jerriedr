@@ -1,12 +1,11 @@
-package util
+package schema
 
 import (
 	"github.com/jkassis/jerriedr/cmd/kube"
-	"github.com/jkassis/jerriedr/cmd/schema"
 	"golang.org/x/sync/errgroup"
 )
 
-func EnvSnap(kubeClient *kube.Client, services []*schema.Service) (err error) {
+func EnvSnap(kubeClient *kube.Client, services []*Service) (err error) {
 	// establish an errgroup
 	eg := errgroup.Group{}
 

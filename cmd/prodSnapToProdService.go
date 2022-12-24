@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/jkassis/jerrie/core"
-	"github.com/jkassis/jerriedr/cmd/util"
+	"github.com/jkassis/jerriedr/cmd/schema"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -24,7 +24,7 @@ func init() {
 
 			srcArchiveSpecs := prodSnapArchiveSpecs
 			dstServiceSpecs := prodServiceSpecs
-			util.EnvRestore(kubeClient, srcArchiveSpecs, dstServiceSpecs)
+			schema.EnvRestore(kubeClient, srcArchiveSpecs, dstServiceSpecs)
 		},
 	}
 

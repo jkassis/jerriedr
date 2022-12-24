@@ -1,4 +1,4 @@
-package util
+package schema
 
 import (
 	"fmt"
@@ -9,12 +9,11 @@ import (
 
 	"github.com/jkassis/jerrie/core"
 	"github.com/jkassis/jerriedr/cmd/kube"
-	"github.com/jkassis/jerriedr/cmd/schema"
 	"github.com/jkassis/jerriedr/cmd/ui"
 	"golang.org/x/sync/errgroup"
 )
 
-func ArchiveFileCopy(kubeClient *kube.Client, srcArchiveFile, dstArchiveFile *schema.ArchiveFile, progressWatcher *ui.ProgressWatcher) (err error) {
+func ArchiveFileCopy(kubeClient *kube.Client, srcArchiveFile, dstArchiveFile *ArchiveFile, progressWatcher *ui.ProgressWatcher) (err error) {
 	core.Log.Warnf("starting copy of '%s' to '%s'", srcArchiveFile.Archive.Spec+"/"+srcArchiveFile.Name, dstArchiveFile.Archive.Spec+"/"+dstArchiveFile.Name)
 
 	// make an eg

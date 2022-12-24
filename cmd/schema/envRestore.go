@@ -1,26 +1,25 @@
-package util
+package schema
 
 import (
 	"github.com/jkassis/jerrie/core"
 	"github.com/jkassis/jerriedr/cmd/kube"
-	"github.com/jkassis/jerriedr/cmd/schema"
 )
 
 func EnvRestore(kubeClient *kube.Client, srcArchiveSpecs, dstServiceSpecs []string) {
 	var err error
 
 	// get src and dst archiveSets and serviceSets from specs
-	var srcArchiveSet *schema.ArchiveSet
-	var dstServiceSet *schema.ServiceSet
+	var srcArchiveSet *ArchiveSet
+	var dstServiceSet *ServiceSet
 	{
-		srcArchiveSet = schema.ArchiveSetNew()
+		srcArchiveSet = ArchiveSetNew()
 		err := srcArchiveSet.ArchiveAddAll(srcArchiveSpecs, "")
 		if err != nil {
 			core.Log.Fatalf("could not add srcArchive %v", err)
 		}
 
 		// get dstServices
-		dstServiceSet = schema.ServiceSetNew()
+		dstServiceSet = ServiceSetNew()
 		err = dstServiceSet.ServiceAddAll(dstServiceSpecs)
 		if err != nil {
 			core.Log.Fatalf("could not add dstArchive %v", err)
@@ -28,21 +27,14 @@ func EnvRestore(kubeClient *kube.Client, srcArchiveSpecs, dstServiceSpecs []stri
 	}
 
 	// let the user pick a srcArchiveFileSet (snapshot)
-	var srcArchiveFileSet *schema.ArchiveFileSet
+	var srcArchiveFileSet *ArchiveFileSet
 	{
 		err = srcArchiveSet.FilesFetch(nil)
 		if err != nil {
 			core.Log.Fatalf("failed to get files for cluster archive set: %v", err)
 		}
 
-		var hasFiles bool
-		for _, srcArchive := range srcArchiveSet.Archives {
-			if len(srcArchive.Files) > 0 {
-				hasFiles = true
-				break
-			}
-		}
-		if !hasFiles {
+		if !srcArchiveSet.HasFiles() {
 			core.Log.Fatalf("found no snapshots in %v", srcArchiveSpecs)
 		}
 
@@ -63,8 +55,8 @@ func EnvRestore(kubeClient *kube.Client, srcArchiveSpecs, dstServiceSpecs []stri
 	for _, srcArchiveFile := range srcArchiveFileSet.ArchiveFiles {
 		// get the dstArchive and dstService
 		var (
-			dstArchive *schema.Archive
-			dstService *schema.Service
+			dstArchive *Archive
+			dstService *Service
 		)
 
 		dstService, err = dstServiceSet.ServiceGetByServiceName(srcArchiveFile.Archive.ServiceName)
@@ -92,7 +84,7 @@ func EnvRestore(kubeClient *kube.Client, srcArchiveSpecs, dstServiceSpecs []stri
 	// finally... reset the raft index of each service. one for each archive.
 	raftsReset := make(map[string]bool)
 	for _, srcArchiveFile := range srcArchiveFileSet.ArchiveFiles {
-		var dstService *schema.Service
+		var dstService *Service
 		dstService, err = dstServiceSet.ServiceGetByServiceName(srcArchiveFile.Archive.ServiceName)
 		if err != nil {
 			core.Log.Fatalf("could not find dstService to match srcArchiveFile '%s': %v", srcArchiveFile.Name, err)

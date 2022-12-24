@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/jkassis/jerrie/core"
 	"github.com/jkassis/jerriedr/cmd/kube"
 	"golang.org/x/sync/errgroup"
 )
@@ -55,6 +56,30 @@ func (as *ArchiveSet) ArchiveGetByService(service string) (a *Archive, err error
 	return nil, fmt.Errorf("could not find archive for service '%s' have only these... %v", service, archiveNames)
 }
 
+func (as *ArchiveSet) PickSnapshot() (err error) {
+	// let the user pick a srcArchiveFileSet (snapshot)
+	var srcArchiveFileSet *ArchiveFileSet
+	{
+		err = as.FilesFetch(nil)
+		if err != nil {
+			core.Log.Fatalf("failed to get files for cluster archive set: %v", err)
+		}
+
+		if !as.HasFiles() {
+			core.Log.Fatalf("found no snapshots in %v", as)
+		}
+
+		picker := ArchiveFileSetPickerNew().ArchiveSetPut(as).Run()
+		srcArchiveFileSet = picker.SelectedSnapshotArchiveFileSet
+
+		if srcArchiveFileSet == nil {
+			core.Log.Fatalf("snapshot not picked... cancelling operation")
+		}
+	}
+
+	return nil
+}
+
 func (as *ArchiveSet) FilesFetch(kubeClient *kube.Client) error {
 	eg := errgroup.Group{}
 
@@ -66,6 +91,17 @@ func (as *ArchiveSet) FilesFetch(kubeClient *kube.Client) error {
 	}
 
 	return eg.Wait()
+}
+
+func (as *ArchiveSet) HasFiles() bool {
+	var hasFiles bool
+	for _, srcArchive := range as.Archives {
+		if len(srcArchive.Files) > 0 {
+			hasFiles = true
+			break
+		}
+	}
+	return hasFiles
 }
 
 func (as *ArchiveSet) SeekTo(t time.Time) {

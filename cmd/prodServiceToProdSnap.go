@@ -5,7 +5,6 @@ import (
 
 	"github.com/jkassis/jerrie/core"
 	"github.com/jkassis/jerriedr/cmd/schema"
-	"github.com/jkassis/jerriedr/cmd/util"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -40,7 +39,7 @@ func init() {
 				services = append(services, service)
 			}
 
-			err = util.EnvSnap(kubeClient, services)
+			err = schema.EnvSnap(kubeClient, services)
 			if err != nil {
 				core.Log.Fatal("could not complete production snapshot: %v", err)
 			}
