@@ -42,7 +42,7 @@ func Post(reqURL, contentType, body string) (resBodyString string, err error) {
 	return string(resBody), nil
 }
 
-func HTTPGet(reqURL, contentType string) (resBodyString string, err error) {
+func Get(reqURL, contentType string) (resBodyString string, err error) {
 	// make the request
 	var req *http.Request
 	{

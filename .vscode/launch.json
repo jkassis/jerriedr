@@ -5,6 +5,19 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "devRequestsInFlight",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}/cmd",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "args": ["devRequestsInFlight"],
+      "env": {
+        "LOG_LEVEL": "warn"
+      }
+    },
+    {
       "name": "devSnapToDevBackup",
       "type": "go",
       "request": "launch",

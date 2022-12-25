@@ -1,16 +1,19 @@
 package schema
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jkassis/jerrie/core"
 	"github.com/jkassis/jerriedr/cmd/http"
 	"github.com/jkassis/jerriedr/cmd/kube"
 	"golang.org/x/sync/errgroup"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func ServiceNew() *Service {
@@ -324,6 +327,42 @@ func (s *Service) ForEachServicePod(
 // Snap initiates a snapshop / backup of the service.
 // the snap message is posted to the raft, so there is no
 // need to send this to each server in the StatefulSet
+func (s *Service) RequestsInFlight(kubeClient *kube.Client) (n int, err error) {
+	if s.IsStatefulSet() {
+		n := 0
+		err = s.ForEachServicePod(kubeClient, func(servicePod *Service) error {
+			m, err := servicePod.RequestsInFlight(kubeClient)
+			n += m
+			return err
+		})
+		return n, err
+	}
+
+	// make the HTTP request to the reset endpoint
+	reqURL := fmt.Sprintf("http://%s:%d/metrics", s.Host, s.Port)
+	core.Log.Warnf("trying: %s", reqURL)
+	if res, err := http.Get(reqURL, "application/json"); err != nil {
+		err = fmt.Errorf("could not scrape %s: %s", reqURL, res)
+		core.Log.Warn(err)
+		return 0, err
+	} else {
+		stats := strings.Split(res, "\n")
+		for _, stat := range stats {
+			if strings.HasPrefix(stat, "fasthttp_requests_in_flight") {
+				n, err := strconv.Atoi(stat[28:])
+				if err != nil {
+					return 0, fmt.Errorf("cannot parse value for : %v", err)
+				}
+				return n, nil
+			}
+		}
+		return 0, fmt.Errorf("stat for fasthttp_requests_in_flight not found in scrape")
+	}
+}
+
+// Snap initiates a snapshop / backup of the service.
+// the snap message is posted to the raft, so there is no
+// need to send this to each server in the StatefulSet
 func (s *Service) Snap(kubeClient *kube.Client) (err error) {
 	core.Log.Warnf("running remote backup for %s", s.Spec)
 
@@ -473,6 +512,28 @@ func (s *Service) Stage(
 				srcArchiveFilePath, dstArchiveFilePath, err)
 		}
 	}
+	return nil
+}
+
+// StartStop starts the service
+func (s *Service) StartStop(kubeClient *kube.Client, start bool) error {
+	if s.IsStatefulSet() {
+		service, err := kubeClient.ServiceGetByName(s.KubeNamespace, s.KubeName)
+		if err != nil {
+			return err
+		}
+		if start {
+			service.Spec.Selector["Pause"] = "True"
+		} else {
+			delete(service.Spec.Selector, "Pause")
+		}
+
+		ctx, cancelFn := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancelFn()
+		kubeClient.Clientset.CoreV1().Services(s.KubeNamespace).
+			Update(ctx, service, metav1.UpdateOptions{})
+	}
+
 	return nil
 }
 

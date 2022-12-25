@@ -27,25 +27,9 @@ func EnvRestore(kubeClient *kube.Client, srcArchiveSpecs, dstServiceSpecs []stri
 	}
 
 	// let the user pick a srcArchiveFileSet (snapshot)
-	var srcArchiveFileSet *ArchiveFileSet
-	{
-		err = srcArchiveSet.FilesFetch(nil)
-		if err != nil {
-			core.Log.Fatalf("failed to get files for cluster archive set: %v", err)
-		}
-
-		if !srcArchiveSet.HasFiles() {
-			core.Log.Fatalf("found no snapshots in %v", srcArchiveSpecs)
-		}
-
-		picker := ArchiveFileSetPickerNew().
-			ArchiveSetPut(srcArchiveSet).
-			Run()
-		srcArchiveFileSet = picker.SelectedSnapshotArchiveFileSet
-
-		if srcArchiveFileSet == nil {
-			core.Log.Fatalf("snapshot not picked... cancelling operation")
-		}
+	srcArchiveFileSet, err := srcArchiveSet.PickSnapshot()
+	if err != nil {
+		core.Log.Fatalf("snapshot not picked... cancelling operation")
 	}
 
 	// servicesReset tracks which services have been reset

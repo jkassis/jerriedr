@@ -156,6 +156,21 @@ func (c *Client) StatefulSetGetByName(namespace string, name string) (*v1.Statef
 }
 
 // PodGetByName returns a pod
+func (c *Client) ServiceGetByName(
+	namespace,
+	name string) (*corev1.Service, error) {
+	service, err := c.Clientset.CoreV1().Services(namespace).Get(context.Background(), name, metav1.GetOptions{})
+	if k8sErrors.IsNotFound(err) {
+		return nil, fmt.Errorf("pod %s in namespace %s not found", service, namespace)
+	} else if statusError, isStatus := err.(*k8sErrors.StatusError); isStatus {
+		return nil, fmt.Errorf("error getting pod %s in namespace %s: %v", name, namespace, statusError.ErrStatus.Message)
+	} else if err != nil {
+		return nil, err
+	}
+	return service, nil
+}
+
+// PodGetByName returns a pod
 func (c *Client) PodGetByName(
 	namespace,
 	name string) (*corev1.Pod, error) {

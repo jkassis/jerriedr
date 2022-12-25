@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jkassis/jerrie/core"
 	"github.com/jkassis/jerriedr/cmd/kube"
 	"golang.org/x/sync/errgroup"
 )
@@ -56,28 +55,25 @@ func (as *ArchiveSet) ArchiveGetByService(service string) (a *Archive, err error
 	return nil, fmt.Errorf("could not find archive for service '%s' have only these... %v", service, archiveNames)
 }
 
-func (as *ArchiveSet) PickSnapshot() (err error) {
+func (as *ArchiveSet) PickSnapshot() (archiveFileSet *ArchiveFileSet, err error) {
 	// let the user pick a srcArchiveFileSet (snapshot)
-	var srcArchiveFileSet *ArchiveFileSet
-	{
-		err = as.FilesFetch(nil)
-		if err != nil {
-			core.Log.Fatalf("failed to get files for cluster archive set: %v", err)
-		}
-
-		if !as.HasFiles() {
-			core.Log.Fatalf("found no snapshots in %v", as)
-		}
-
-		picker := ArchiveFileSetPickerNew().ArchiveSetPut(as).Run()
-		srcArchiveFileSet = picker.SelectedSnapshotArchiveFileSet
-
-		if srcArchiveFileSet == nil {
-			core.Log.Fatalf("snapshot not picked... cancelling operation")
-		}
+	err = as.FilesFetch(nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get files for cluster archive set: %v", err)
 	}
 
-	return nil
+	if !as.HasFiles() {
+		return nil, fmt.Errorf("found no snapshots in %v", as)
+	}
+
+	picker := ArchiveFileSetPickerNew().ArchiveSetPut(as).Run()
+	archiveFileSet = picker.SelectedSnapshotArchiveFileSet
+
+	if archiveFileSet == nil {
+		return nil, fmt.Errorf("snapshot not picked... cancelling operation")
+	}
+
+	return archiveFileSet, nil
 }
 
 func (as *ArchiveSet) FilesFetch(kubeClient *kube.Client) error {
