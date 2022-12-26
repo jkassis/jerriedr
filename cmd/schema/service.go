@@ -516,6 +516,24 @@ func (s *Service) Stage(
 }
 
 // StartStop starts the service
+func (s *Service) WaitForDrain(kubeClient *kube.Client) error {
+	// loop once per second for 20 seconds
+	for i := 0; i < 20; i++ {
+		n, err := s.RequestsInFlight(kubeClient)
+		if err != nil {
+			return fmt.Errorf("error while waiting for drain: %v", err)
+		}
+		if n == 0 {
+			return nil
+		}
+
+		<-time.After(time.Second)
+	}
+
+	return fmt.Errorf("service %s did not drain in 20 seconds", s.Name)
+}
+
+// StartStop starts the service
 func (s *Service) StartStop(kubeClient *kube.Client, start bool) error {
 	if s.IsStatefulSet() {
 		service, err := kubeClient.ServiceGetByName(s.KubeNamespace, s.KubeName)

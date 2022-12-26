@@ -3,6 +3,7 @@ package schema
 import (
 	"github.com/jkassis/jerrie/core"
 	"github.com/jkassis/jerriedr/cmd/kube"
+	"golang.org/x/sync/errgroup"
 )
 
 func EnvRestore(kubeClient *kube.Client, srcArchiveSpecs, dstServiceSpecs []string) {
@@ -10,15 +11,17 @@ func EnvRestore(kubeClient *kube.Client, srcArchiveSpecs, dstServiceSpecs []stri
 
 	// get src and dst archiveSets and serviceSets from specs
 	var srcArchiveSet *ArchiveSet
-	var dstServiceSet *ServiceSet
 	{
 		srcArchiveSet = ArchiveSetNew()
 		err := srcArchiveSet.ArchiveAddAll(srcArchiveSpecs, "")
 		if err != nil {
 			core.Log.Fatalf("could not add srcArchive %v", err)
 		}
+	}
 
-		// get dstServices
+	//
+	var dstServiceSet *ServiceSet
+	{
 		dstServiceSet = ServiceSetNew()
 		err = dstServiceSet.ServiceAddAll(dstServiceSpecs)
 		if err != nil {
@@ -26,57 +29,67 @@ func EnvRestore(kubeClient *kube.Client, srcArchiveSpecs, dstServiceSpecs []stri
 		}
 	}
 
-	// let the user pick a srcArchiveFileSet (snapshot)
+	// User picks the snapshot
 	srcArchiveFileSet, err := srcArchiveSet.PickSnapshot()
 	if err != nil {
 		core.Log.Fatalf("snapshot not picked... cancelling operation")
 	}
 
-	// servicesReset tracks which services have been reset
-	servicesReset := make(map[string]bool)
-
-	// one archive at a time...
-	for _, srcArchiveFile := range srcArchiveFileSet.ArchiveFiles {
-		// get the dstArchive and dstService
-		var (
-			dstArchive *Archive
-			dstService *Service
-		)
-
-		dstService, err = dstServiceSet.ServiceGetByServiceName(srcArchiveFile.Archive.ServiceName)
-		if err != nil {
-			core.Log.Fatalf("could not find dstService to match srcArchiveFile '%s': %v", srcArchiveFile.Name, err)
+	// get all dstServices
+	dstServices := map[string]*Service{}
+	{
+		for _, srcArchiveFile := range srcArchiveFileSet.ArchiveFiles {
+			dstService, err := dstServiceSet.ServiceGetByServiceName(srcArchiveFile.Archive.ServiceName)
+			if err != nil {
+				core.Log.Fatalf("could not find dstService to match srcArchiveFile '%s': %v", srcArchiveFile.Name, err)
+			}
+			dstServices[dstService.Name] = dstService
 		}
-
-		err = dstService.Stage(kubeClient, srcArchiveFile)
-		if err != nil {
-			core.Log.Fatalf("could not stage %s to %s: %v", srcArchiveFile.Name, dstArchive.Spec, err)
-		}
-
-		// reset the service
-		// we do this deduping because sometimes we multiplex many
-		// service snapshots / backups into a single service (eg. prod to dev)
-		if _, ok := servicesReset[dstService.KubeName]; !ok {
-			servicesReset[dstService.KubeName] = true
-			dstService.Reset(kubeClient)
-		}
-
-		// run the restore endpoint
-		dstService.Restore(kubeClient)
 	}
 
-	// finally... reset the raft index of each service. one for each archive.
-	raftsReset := make(map[string]bool)
+	eg := errgroup.Group{}
+	for _, dstService := range dstServices {
+		dstService := dstService
+		eg.Go(func() (err error) {
+			if err = dstService.StartStop(kubeClient, false); err != nil {
+				return err
+			}
+			if err = dstService.WaitForDrain(kubeClient); err != nil {
+				return err
+			}
+			return dstService.Reset(kubeClient)
+		})
+	}
+	if err = eg.Wait(); err != nil {
+		core.Log.Fatal(err)
+	}
+
+	// for each archiveFile
 	for _, srcArchiveFile := range srcArchiveFileSet.ArchiveFiles {
-		var dstService *Service
-		dstService, err = dstServiceSet.ServiceGetByServiceName(srcArchiveFile.Archive.ServiceName)
-		if err != nil {
-			core.Log.Fatalf("could not find dstService to match srcArchiveFile '%s': %v", srcArchiveFile.Name, err)
+		// have to do these one at a time.
+		dstService := dstServices[srcArchiveFile.Archive.ServiceName]
+
+		if err = dstService.Stage(kubeClient, srcArchiveFile); err != nil {
+			core.Log.Fatalf("could not stage %s to %s: %v", srcArchiveFile.Name, dstService.Spec, err)
 		}
 
-		if _, ok := raftsReset[dstService.Name]; !ok {
-			raftsReset[dstService.Name] = true
-			dstService.RAFTReset(kubeClient)
+		if err = dstService.Restore(kubeClient); err != nil {
+			core.Log.Fatalf("could not stage %s to %s: %v", srcArchiveFile.Name, dstService.Spec, err)
 		}
+	}
+
+	// Reset RAFTs
+	eg = errgroup.Group{}
+	for _, dstService := range dstServices {
+		dstService := dstService
+		eg.Go(func() (err error) {
+			if err = dstService.RAFTReset(kubeClient); err != nil {
+				return err
+			}
+			return dstService.StartStop(kubeClient, true)
+		})
+	}
+	if err = eg.Wait(); err != nil {
+		core.Log.Fatal(err)
 	}
 }
