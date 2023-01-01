@@ -44,6 +44,19 @@
       }
     },
     {
+      "name": "devBackupToDevService",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}/cmd",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "args": ["devBackupToDevService"],
+      "env": {
+        "LOG_LEVEL": "warn"
+      }
+    }
+    {
       "name": "prodBackupToDevService",
       "type": "go",
       "request": "launch",

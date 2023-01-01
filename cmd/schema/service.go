@@ -428,7 +428,11 @@ func (s *Service) Reset(kubeClient *kube.Client) (err error) {
 	reqBody := fmt.Sprintf(
 		`{ "UUID": "%s", "Fn": "/v1/Reset/App", "Body": {} }`, uuid.NewString())
 	if res, err := http.Post(reqURL, "application/json", reqBody); err != nil {
-		return fmt.Errorf("%s: %s: %v", reqURL, res, err)
+		if strings.Contains(err.Error(), "file already closed") {
+			// ignore
+		} else {
+			return fmt.Errorf("%s: %s: %v", reqURL, res, err)
+		}
 	} else {
 		core.Log.Warnf("%s: %s", reqURL, res)
 	}

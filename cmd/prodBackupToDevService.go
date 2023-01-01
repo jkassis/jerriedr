@@ -9,12 +9,12 @@ import (
 
 // conf for the dev service
 var prodBackupToDevServiceSpecs []string = []string{
-	"local|dockie|10001|/v1/Backup|/v1/Restore/Dockie|/var/multi/single/local-server-0",
-	"local|dubbie|10001|/v1/Backup|/v1/Restore/Other|/var/multi/single/local-server-0",
-	"local|keevie|10001|/v1/Backup|/v1/Restore/Other|/var/multi/single/local-server-0",
-	"local|ledgie|10001|/v1/Backup|/v1/Restore/Other|/var/multi/single/local-server-0",
-	"local|permie|10001|/v1/Backup|/v1/Restore/Other|/var/multi/single/local-server-0",
-	"local|tickie|10001|/v1/Backup|/v1/Restore/Other|/var/multi/single/local-server-0",
+	"local|dockie|10001|/v1/Backup|/v1/Restore/Dockie|/var/multi/single/local-server-0/restore",
+	"local|dubbie|10001|/v1/Backup|/v1/Restore/Other|/var/multi/single/local-server-0/restore",
+	"local|keevie|10001|/v1/Backup|/v1/Restore/Other|/var/multi/single/local-server-0/restore",
+	"local|ledgie|10001|/v1/Backup|/v1/Restore/Other|/var/multi/single/local-server-0/restore",
+	"local|permie|10001|/v1/Backup|/v1/Restore/Other|/var/multi/single/local-server-0/restore",
+	"local|tickie|10001|/v1/Backup|/v1/Restore/Other|/var/multi/single/local-server-0/restore",
 }
 
 func init() {
