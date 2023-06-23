@@ -32,9 +32,9 @@ func EnvCopy(kubeClient *kube.Client, srcArchiveSpecs, dstArchiveSpecs []string)
 	}
 
 	// pick a snapshot set
-	srcArchiveFileSet, err := srcArchiveSet.PickSnapshot()
+	srcArchiveFileSet, err := srcArchiveSet.PickSnapshot(kubeClient)
 	if err != nil {
-		core.Log.Fatalf("snapshot not picked... cancelling operation")
+		core.Log.Fatalf("snapshot not picked... cancelling operation: %v", err)
 	}
 
 	// present a progressWatcher

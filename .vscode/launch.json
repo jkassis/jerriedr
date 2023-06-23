@@ -55,7 +55,20 @@
       "env": {
         "LOG_LEVEL": "warn"
       }
-    }
+    },
+    {
+      "name": "prodServiceToProdSnap",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}/cmd",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "args": ["prodServiceToProdSnap", "--kc", "${env:HOME}/.kube/config"],
+      "env": {
+        "LOG_LEVEL": "warn"
+      }
+    },
     {
       "name": "prodBackupToDevService",
       "type": "go",
@@ -65,10 +78,6 @@
       "console": "integratedTerminal",
       "cwd": "${workspaceFolder}",
       "args": ["prodBackupToDevService"],
-      // "args": ["serve"],
-      // "args": ["prodsnapshottake", "--kc", "/Users/jkassis/.kube/config"],
-      // "args": [ "raftindexget", "--db", "/var/multi/single/local-server-0/data/" ],
-      // "args": ["raftindexset", "--dbDir=/var/multi/single/local-server-0/data/", "--index=62"],
       "env": {
         "LOG_LEVEL": "warn"
       }
@@ -81,7 +90,7 @@
       "program": "${workspaceFolder}/cmd",
       "console": "integratedTerminal",
       "cwd": "${workspaceFolder}",
-      "args": ["prodSnapToProdBackup", "--kc", "/Users/jkassis/.kube/config"],
+      "args": ["prodSnapToProdBackup", "--kc", "${env:HOME}/.kube/config"],
       "env": {
         "LOG_LEVEL": "warn"
       }

@@ -376,7 +376,7 @@ func (s *Service) Snap(kubeClient *kube.Client) (err error) {
 			return b.Snap(kubeClient)
 		} else if s.IsPod() {
 			// yes. make sure we have a kube client
-			if kubeClient != nil {
+			if kubeClient == nil {
 				return fmt.Errorf("need kubeClient")
 			}
 
@@ -403,7 +403,7 @@ func (s *Service) Snap(kubeClient *kube.Client) (err error) {
 
 	// make the request
 	reqBody := fmt.Sprintf(
-		`{ "UUID": "%s", "Fn": "%s", "Body": {} }`, uuid.NewString(), s.BackupURL)
+		`{ "UUID": "%s", "Fn": "/v1/Backup", "Body": {} }`, uuid.NewString())
 	if res, err := http.Post(reqURL, "application/json", reqBody); err != nil {
 		return fmt.Errorf("could not request %s: %v", reqURL, err)
 	} else {

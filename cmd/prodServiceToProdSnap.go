@@ -41,12 +41,11 @@ func init() {
 
 			err = schema.EnvSnap(kubeClient, services)
 			if err != nil {
-				core.Log.Fatal("could not complete production snapshot: %v", err)
+				core.Log.Fatalf("could not complete production snapshot: %v", err)
 			}
 
 			duration := time.Since(start)
 			core.Log.Warnf("prodSnapshotTake: took %s", duration.String())
-
 		},
 	}
 

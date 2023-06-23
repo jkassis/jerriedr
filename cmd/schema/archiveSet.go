@@ -55,9 +55,9 @@ func (as *ArchiveSet) ArchiveGetByService(service string) (a *Archive, err error
 	return nil, fmt.Errorf("could not find archive for service '%s' have only these... %v", service, archiveNames)
 }
 
-func (as *ArchiveSet) PickSnapshot() (archiveFileSet *ArchiveFileSet, err error) {
+func (as *ArchiveSet) PickSnapshot(kubeClient *kube.Client) (archiveFileSet *ArchiveFileSet, err error) {
 	// let the user pick a srcArchiveFileSet (snapshot)
-	err = as.FilesFetch(nil)
+	err = as.FilesFetch(kubeClient)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get files for cluster archive set: %v", err)
 	}

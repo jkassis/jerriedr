@@ -29,7 +29,7 @@ func EnvRestore(kubeClient *kube.Client, srcArchiveSpecs, dstServiceSpecs []stri
 	}
 
 	// User picks the snapshot
-	srcArchiveFileSet, err := srcArchiveSet.PickSnapshot()
+	srcArchiveFileSet, err := srcArchiveSet.PickSnapshot(kubeClient)
 	if err != nil {
 		core.Log.Fatalf("snapshot not picked... cancelling operation")
 	}

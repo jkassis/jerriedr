@@ -1,4 +1,4 @@
-#!/usr/local/bin/fish
+#!/usr/bin/env fish
 make
 set REGISTRY_HOST (oc get route default-route -n openshift-image-registry --template='{{ .spec.host }}')
 docker login -u kubeadmin -p (oc whoami -t) $REGISTRY_HOST
